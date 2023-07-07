@@ -1,0 +1,3 @@
+#mesondefine @VERSION@
+#mesondefine @MESON_C_COMPILER@
+#mesondefine @MESON_CXX_COMPILER@

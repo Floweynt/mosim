@@ -1,0 +1,3 @@
+[submodule "subprojects/stacktrace"]
+	path = subprojects/stacktrace
+	url = https://github.com/Floweynt/stacktrace

@@ -1,0 +1,13 @@
+{
+    "basis": "sto-3g",
+    "charge": 0,
+    "units": "bohr",
+    "atoms": [
+        [
+            "He",
+            0,
+            0,
+            0
+        ]
+    ]
+}
