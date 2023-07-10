@@ -1,12 +1,11 @@
+#include <GL/gl.h>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
-#include <GL/gl.h>
 #include <iostream>
 
 [[gnu::constructor]] void init()
 {
-    glfwSetErrorCallback(+[](int, const char* msg )
-            { std::cerr << msg << '\n'; });
+    glfwSetErrorCallback(+[](int, const char* msg) { std::cerr << msg << '\n'; });
 
     if (!glfwInit())
     {

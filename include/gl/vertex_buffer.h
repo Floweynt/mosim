@@ -1,8 +1,6 @@
 #ifndef __VERTEX_BUFFER_H__
 #define __VERTEX_BUFFER_H__
-#include <GL/glew.h>
 
-// reorder barrier
 #include "glstate.h"
 #include "matrix.h"
 #include "shader.h"

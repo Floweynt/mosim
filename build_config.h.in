@@ -1,3 +1,4 @@
-#mesondefine @VERSION@
-#mesondefine @MESON_C_COMPILER@
-#mesondefine @MESON_CXX_COMPILER@
+#mesondefine VERSION
+#mesondefine PROJECT_NAME
+#mesondefine MESON_C_COMPILER
+#mesondefine MESON_CXX_COMPILER

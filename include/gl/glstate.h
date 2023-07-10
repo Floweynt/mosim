@@ -13,15 +13,15 @@
 #define _gl_resource_object(T)                                                                                                                       \
     T(const T&) = delete;                                                                                                                            \
     T& operator=(const T&) = delete;                                                                                                                 \
-    T(T&& rhs) noexcept                                                                                                                                \
+    T(T&& rhs) noexcept                                                                                                                              \
     {                                                                                                                                                \
-        id = rhs.id;                                                                                                                                   \
-        rhs.id = 0;                                                                                                                                    \
+        id = rhs.id;                                                                                                                                 \
+        rhs.id = 0;                                                                                                                                  \
     }                                                                                                                                                \
-    T& operator=(T&& rhs) noexcept                                                                                                                     \
+    T& operator=(T&& rhs) noexcept                                                                                                                   \
     {                                                                                                                                                \
-        id = rhs.id;                                                                                                                                   \
-        rhs.id = 0;                                                                                                                                    \
+        id = rhs.id;                                                                                                                                 \
+        rhs.id = 0;                                                                                                                                  \
         return *this;                                                                                                                                \
     }
 

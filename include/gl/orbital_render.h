@@ -10,8 +10,7 @@ class hf_isosurface
     size_t nverts;
 
 public:
-    
     void draw(gl::render_manager& render);
-    void isolevel_hf(const hartree_fock_result& result, uint32_t which_mo, glm::vec3 start, glm::vec3 end, size_t detail);
+    void isolevel_hf(const hartree_fock_result& result, uint32_t which_mo, glm::vec3 start, glm::vec3 end, size_t detail, float isolevel);
 };
 

@@ -21,12 +21,13 @@ sources = [
   'src/hf/hf.cpp',
   'src/hf/basis.cpp',
   'src/gl/init.cpp',
-  'src/gl/marching_cubes.cpp',
+  'src/gl/orbital_render.cpp',
   'src/gl/render.cpp',
   'src/gl/shader.cpp',
   'src/gl/window.cpp',
   'src/resources.cpp',
-  'src/hf/chem.cpp'
+  'src/hf/chem.cpp',
+  'src/gl/font.cpp'
 ]
 
 include_dirs = [
@@ -61,14 +62,15 @@ stacktrace_subproj = cmake.subproject('stacktrace', options: stacktrace_opts)
 stacktrace_dep = stacktrace_subproj.dependency('stacktrace')
 
 conf_data = configuration_data()
-conf_data.set('VERSION', meson.project_version())
-conf_data.set('MESON_C_COMPILER', meson.get_compiler('c').get_id())
-conf_data.set('MESON_CXX_COMPILER', meson.get_compiler('cpp').get_id())
+conf_data.set_quoted('VERSION', meson.project_version())
+conf_data.set_quoted('PROJECT_NAME', 'mosim')
+conf_data.set_quoted('MESON_C_COMPILER', meson.get_compiler('c').get_id())
+conf_data.set_quoted('MESON_CXX_COMPILER', meson.get_compiler('cpp').get_id())
 
 configure_file(input: 'build_config.h.in', output: 'build_config.h', configuration : conf_data)
 
 mosim = executable('mosim', sources, 
-  dependencies: [fmt_dep, eigen_dep, glfw_dep, glew_dep, glm_dep, omp_dep, stacktrace_dep, libarchive_dep],
+  dependencies: [fmt_dep, eigen_dep, glfw_dep, glew_dep, glm_dep, stacktrace_dep, libarchive_dep],
   cpp_pch: 'pch/pch.h', 
   cpp_args : '-DFMT_HEADER_ONLY', 
   link_args: ['-lbfd'],

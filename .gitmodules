@@ -1,3 +1,6 @@
 [submodule "subprojects/stacktrace"]
 	path = subprojects/stacktrace
 	url = https://github.com/Floweynt/stacktrace
+[submodule "deps/GLFont"]
+	path = deps/GLFont
+	url = https://github.com/jtberglund/GLFont

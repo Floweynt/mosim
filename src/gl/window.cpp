@@ -34,22 +34,37 @@ gl::window::window(int width, int height, const char* name)
     glfwSetKeyCallback(
         win, +[](GLFWwindow* w, int key, int scancode, int action, int mods) {
             window* that = (window*)glfwGetWindowUserPointer(w);
-            that->controls(key, scancode, action, mods);
+            if (action == GLFW_PRESS)
+            {
+                that->key_pressed(key, scancode, mods);
+            }
+            else if (action == GLFW_RELEASE)
+            {
+                that->key_released(key, scancode, mods);
+            }
         });
     glfwSetMouseButtonCallback(
         win, +[](GLFWwindow* w, int button, int action, int mods) {
             window* that = (window*)glfwGetWindowUserPointer(w);
-            that->mause_button(button, action, mods);
+            if (action == GLFW_PRESS)
+            {
+                that->mouse_button_pressed(button, mods);
+            }
+            else if (action == GLFW_RELEASE)
+            {
+                that->mouse_button_released(button, mods);
+            }
         });
+
     glfwSetScrollCallback(
         win, +[](GLFWwindow* w, double x, double y) {
             window* that = (window*)glfwGetWindowUserPointer(w);
-            that->mause_scroll(x, y);
+            that->mouse_scrolled(x, y);
         });
     glfwSetCursorPosCallback(
         win, +[](GLFWwindow* w, double mouse_x, double mouse_y) {
             window* that = (window*)glfwGetWindowUserPointer(w);
-            that->mause(mouse_x, mouse_y);
+            that->mouse_moved(mouse_x, mouse_y);
         });
     glfwSwapInterval(1);
 
@@ -77,7 +92,7 @@ void gl::window::run()
         glClearColor(bg[0], bg[1], bg[2], bg[3]);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        render(glm::perspective(fov, (double)window_width / (double)window_height, z_near, z_far));
+        render(glm::perspective(fov, (double)window_width / (double)window_height, z_near, z_far), {window_width, window_height});
 
         glfwSwapBuffers(win);
         glfwPollEvents();

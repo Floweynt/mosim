@@ -15,4 +15,6 @@ void main()
 {
     float diffuse_strength = max(dot(out_normal, normalize(diffuse_pos - out_pos)), 0.0);
     FragColor = vec4((ambient_strength * ambient_color + diffuse_strength * diffuse_color) * vec3(out_color), 1);
+    //FragColor = vec4(vec3(gl_FragCoord.z), 1.0);
+
 }

@@ -102,7 +102,9 @@ vec3 mo_grad(vec3 r)
     return vec3((mo_phi(r + GRAD_DELTA_X) - val) / EPS, (mo_phi(r + GRAD_DELTA_Y) - val) / EPS, (mo_phi(r + GRAD_DELTA_Z) - val) / EPS);
 }
 
-vec3 cube_pos(uint i) { return start + vec3(gl_GlobalInvocationID + VERTICES[i]) * cube_step; }
+const uvec3 VERTICES_TEST[4] = uvec3[](uvec3(0, 0, 0), uvec3(1, 0, 0), uvec3(0, 1, 0), uvec3(0, 0, 1));
+
+vec3 cube_pos(uint i) { return start + vec3(gl_GlobalInvocationID + VERTICES_TEST[i]) * cube_step; }
 
 float cube_val(uint i) { return mo_phi(cube_pos(i)); }
 
@@ -114,53 +116,40 @@ vec3 vertex_interp(vec3 p0, vec3 p1, float d0, float d1)
 
 int lookup_vert(uint i, uint j) { return texelFetch2D(TRIANGLE_LOOKUP, ivec2(int(j), int(i)), 0).a; }
 
-void emit_array(in vec4 out_buf[32], int number_of_verts)
+void emit_array(in vec4 out_buf[6], uint number_of_verts)
 {
     uint idx = atomicAdd(count, number_of_verts);
     for (int i = 0; i < number_of_verts; i++)
         vert_list[idx + i] = out_buf[i];
 }
 
-void march_the_cubes(in float cube_vals[8], float phase)
+void march_the_cubes(in float cube_vals[4], float phase)
 {
-    uint cube_index = 0;
-    for (uint i = 0; i < 8; i++)
-        cube_index |= uint(cube_vals[i] * phase < isolevel) * (1 << i);
+    bool origin = (cube_vals[0] * phase < isolevel);
+    bool flags[3] = bool[]((cube_vals[1] * phase < isolevel), (cube_vals[2] * phase < isolevel), (cube_vals[3] * phase < isolevel));
+    vec4 buf[6];
 
-    if (cube_index == 0 || cube_index == 255)
-        return;
-
-    vec3 vert_list[12];
-    for (uint i = 0; i < 12; i++)
+    uint write_pos = 0;
+    for (uint idx = 0; idx < 3; idx++)
     {
-        vert_list[i] = vertex_interp(cube_pos(EDGES[i].x), cube_pos(EDGES[i].y), cube_vals[EDGES[i].x] * phase, cube_vals[EDGES[i].y] * phase);
+        if (flags[idx] != origin)
+        {
+            vec3 pos = vertex_interp(cube_pos(0), cube_pos(idx + 1), cube_vals[0] * phase, cube_vals[idx + 1] * phase);
+            vec4 point = vec4(pos, phase);
+            vec3 normal = -phase * normalize(mo_grad(pos));
+
+            buf[write_pos++] = point;
+            buf[write_pos++] = vec4(normal, 1);
+        }
     }
 
-    vec4 out_buf[32];
-
-    int i = 0;
-    for (; lookup_vert(cube_index, i * 3) != -1; i++)
-    {
-        vec3 norm_approx = -phase * normalize(mo_grad(vec3(vert_list[lookup_vert(cube_index, i * 3 + 0)])));
-        // write the values
-        out_buf[i * 6 + 0] = vec4(vert_list[lookup_vert(cube_index, i * 3 + 0)], phase);
-        out_buf[i * 6 + 1] = vec4(norm_approx, 1);
-        out_buf[i * 6 + 2] = vec4(vert_list[lookup_vert(cube_index, i * 3 + 1)], phase);
-        out_buf[i * 6 + 3] = vec4(norm_approx, 1);
-        out_buf[i * 6 + 4] = vec4(vert_list[lookup_vert(cube_index, i * 3 + 2)], phase);
-        out_buf[i * 6 + 5] = vec4(norm_approx, 1);
-    }
-
-    emit_array(out_buf, i * 6);
+    emit_array(buf, write_pos);
 }
 
 void main()
 {
-    // if (abs(mo_phi(cube_pos(0))) < isolevel / 10)
-    //     return;
-
-    float cube_vals[8];
-    for (uint i = 0; i < 8; i++)
+    float cube_vals[4];
+    for (uint i = 0; i < 4; i++)
         cube_vals[i] = cube_val(i);
 
     march_the_cubes(cube_vals, 1);

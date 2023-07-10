@@ -47,25 +47,24 @@ namespace
         return U * (D * U.transpose());
     }
 
-    auto fact_ratio2(const int a, const int b) -> double { return fact(a) / fact(b) / fact(a - 2 * b); }
+    constexpr auto fact_ratio2(int64_t a, int64_t b) -> double { return fact(a) / fact(b) / fact(a - 2 * b); }
 
-    auto b0(int i, int r, double g) -> double { return fact_ratio2(i, r) * pow(4 * g, r - i); }
+    constexpr auto b0(int i, int r, double g) -> double { return fact_ratio2(i, r) * pow_i(4 * g, r - i); }
 
-    auto force_b(const int i, const int l1, const int l2, const double& p, const double& a, const double& b, const int r, const double& g) -> double
+    constexpr auto force_b(int64_t i, int64_t l1, int64_t l2, double p, double a, double b, int64_t r, double g) -> double
     {
         return binomial_prefactor(i, l1, l2, p - a, p - b) * b0(i, r, g);
     }
 
-    auto b_term(const int i1, const int i2, const int r1, const int r2, const int u, const int l1, const int l2, const int l3, const int l4,
-                const double& px, const double& ax, const double& bx, const double& qx, const double& cx, const double& dx, const double& gamma1,
-                const double& gamma2, const double& delta) -> double
+    constexpr auto b_term(int64_t i1, int64_t i2, int64_t r1, int64_t r2, int64_t u, int64_t l1, int64_t l2, int64_t l3, int64_t l4, double px,
+                          double ax, double bx, double qx, double cx, double dx, double gamma1, double gamma2, double delta) -> double
     {
-        return force_b(i1, l1, l2, px, ax, bx, r1, gamma1) * pow(-1, i2) * force_b(i2, l3, l4, qx, cx, dx, r2, gamma2) * pow(-1, u) *
-               fact_ratio2(i1 + i2 - 2 * (r1 + r2), u) * pow(qx - px, i1 + i2 - 2 * (r1 + r2) - 2 * u) / pow(delta, i1 + i2 - 2 * (r1 + r2) - u);
+        return force_b(i1, l1, l2, px, ax, bx, r1, gamma1) * pow_i(-1, i2) * force_b(i2, l3, l4, qx, cx, dx, r2, gamma2) * pow_i(-1, u) *
+               fact_ratio2(i1 + i2 - 2 * (r1 + r2), u) * pow_i(qx - px, i1 + i2 - 2 * (r1 + r2) - 2 * u) / pow_i(delta, i1 + i2 - 2 * (r1 + r2) - u);
     }
 
-    auto b_array(const int l1, const int l2, const int l3, const int l4, const double& p, const double& a, const double& b, const double& q,
-                 const double& c, const double& d, const double g1, const double g2, const double delta) -> std::vector<double>
+    constexpr auto b_array(int64_t l1, int64_t l2, int64_t l3, int64_t l4, double p, double a, double b, double q, double c, double d, double g1,
+                           double g2, double delta) -> std::vector<double>
     {
         int imax = l1 + l2 + l3 + l4 + 1;
         std::vector<double> arr(imax, 0);
@@ -89,14 +88,13 @@ namespace
         return arr;
     }
 
-    auto a_term(const int i, const int r, const int u, const int l1, const int l2, const double pax, const double pbx, const double cpx,
-                const double gamma) -> double
+    constexpr auto a_term(int64_t i, int64_t r, int64_t u, int64_t l1, int64_t l2, double pax, double pbx, double cpx, double gamma) -> double
     {
-        return pow(-1, i) * binomial_prefactor(i, l1, l2, pax, pbx) * pow(-1, u) * fact(i) * pow(cpx, i - 2 * r - 2 * u) * pow(0.25 / gamma, r + u) /
-               fact(r) / fact(u) / fact(i - 2 * r - 2 * u);
+        return pow_i(-1, i) * binomial_prefactor(i, l1, l2, pax, pbx) * pow_i(-1, u) * fact(i) * pow_i(cpx, i - 2 * r - 2 * u) *
+               pow_i(0.25 / gamma, r + u) / fact(r) / fact(u) / fact(i - 2 * r - 2 * u);
     }
 
-    auto a_array(const int l1, const int l2, const double pa, const double pb, const double cp, const double g) -> std::vector<double>
+    constexpr auto a_array(int64_t l1, int64_t l2, double pa, double pb, double cp, double g) -> std::vector<double>
     {
         int imax = l1 + l2 + 1;
         std::vector<double> arr(imax, 0);
@@ -114,12 +112,12 @@ namespace
         return arr;
     }
 
-    auto overlap_1d(int l1, int l2, double x1, double x2, double gamma) -> double
+    constexpr auto overlap_1d(int64_t l1, int64_t l2, double x1, double x2, double gamma) -> double
     {
         double sum = 0;
         for (int i = 0; i < (1 + floor(0.5 * (l1 + l2))); i++)
         {
-            sum += binomial_prefactor(2 * i, l1, l2, x1, x2) * fact2(2 * i - 1) / pow(2 * gamma, i);
+            sum += binomial_prefactor(2 * i, l1, l2, x1, x2) * fact2(2 * i - 1) / pow_i(2 * gamma, i);
         }
         return sum;
     }
@@ -161,7 +159,7 @@ namespace
     auto gto_kinetic(const gto_data& gto1, const gto_data& gto2, const glm::dvec3& pos1, const glm::dvec3& pos2) -> double
     {
         double term0 = gto2.get_alpha() * (2 * (gto2.get_l() + gto2.get_m() + gto2.get_n()) + 3) * gto_overlap(gto1, gto2, pos1, pos2);
-        double term1 = -2 * pow(gto2.get_alpha(), 2.0) *
+        double term1 = -2 * pow_i(gto2.get_alpha(), 2) *
                        (overlap(gto1.get_alpha(), gto1.get_l(), gto1.get_m(), gto1.get_n(), pos1, gto2.get_alpha(), gto2.get_l() + 2, gto2.get_m(),
                                 gto2.get_n(), pos2) +
                         overlap(gto1.get_alpha(), gto1.get_l(), gto1.get_m(), gto1.get_n(), pos1, gto2.get_alpha(), gto2.get_l(), gto2.get_m() + 2,
@@ -243,10 +241,9 @@ namespace
         return sum * a.proton_count();
     }
 
-    auto coulomb_repulsion(const glm::dvec3& a, const double& norma, const int la, const int ma, const int na, const double& alphaa,
-                           const glm::dvec3& b, const double& normb, const int lb, const int mb, const int nb, const double& alphab,
-                           const glm::dvec3& c, const double& normc, const int lc, const int mc, const int nc, const double& alphac,
-                           const glm::dvec3& d, const double& normd, const int ld, const int md, const int nd, const double& alphad) -> double
+    auto coulomb_repulsion(const glm::dvec3& a, double norma, int64_t la, int64_t ma, int64_t na, double alphaa, const glm::dvec3& b, double normb,
+                           int64_t lb, int64_t mb, int64_t nb, double alphab, const glm::dvec3& c, double normc, int64_t lc, int64_t mc, int64_t nc,
+                           double alphac, const glm::dvec3& d, double normd, int64_t ld, int64_t md, int64_t nd, double alphad) -> double
     {
         double rab2 = glm::distance2(a, b);
         double rcd2 = glm::distance2(c, d);
@@ -415,8 +412,9 @@ public:
                 .mo_energies = std::move(molorben),
                 .coefficients = std::move(C),
                 .orbitals = std::move(orbitals),
-                .atoms = std::vector<std::pair<uint32_t, glm::dvec3>>(atoms.begin(), atoms.end())
-
+                .atoms = std::vector<std::pair<uint32_t, glm::dvec3>>(atoms.begin(), atoms.end()),
+                .electron_count = electron_count,
+                .homo_index = (electron_count + 1) / 2 - 1
         };
     }
 

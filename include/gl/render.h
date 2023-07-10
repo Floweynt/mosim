@@ -5,6 +5,7 @@
 #include "util.h"
 #include "vertex_buffer.h"
 #include <cstdint>
+#include <glm/fwd.hpp>
 #include <glm/glm.hpp>
 #include <memory>
 #include <stack>
@@ -62,7 +63,11 @@ namespace gl
         matrix_stack projection_stack;
         matrix_stack view_stack;
 
+        uvec2 screen_size;
     public:
+        constexpr void set_screen_size(uvec2 s) { screen_size = s; }
+        constexpr auto get_screen_size() -> uvec2 { return screen_size; }
+
         [[nodiscard]] auto get_shader_manager() -> shader_manager& { return shader_man; }
         [[nodiscard]] auto model() -> matrix_stack& { return model_stack; }
         [[nodiscard]] auto projection() -> matrix_stack& { return projection_stack; }
