@@ -4,3 +4,6 @@
 [submodule "deps/GLFont"]
 	path = deps/GLFont
 	url = https://github.com/jtberglund/GLFont
+[submodule "subprojects/nativefiledialog-extended"]
+	path = subprojects/nativefiledialog-extended
+	url = https://github.com/btzy/nativefiledialog-extended

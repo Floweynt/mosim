@@ -40,16 +40,16 @@ void basis_set::init_json(const nlohmann::json& config)
 
             for (size_t i = 0; i < shell.at("angular_momentum").size(); i++)
             {
-                size_t L = shell.at("angular_momentum").at(i);
-                if (L > 2)
+                size_t angular = shell.at("angular_momentum").at(i);
+                if (angular > 2)
                 {
                     throw std::runtime_error("L > 2");
                 }
 
                 auto coefficients = shell.at("coefficients").at(i);
 
-                const auto* metadata = ORBITALS_METADATA_LUT[L];
-                auto metadata_size = ORBITALS_METADATA_LUT_SIZE[L];
+                const auto* metadata = ORBITALS_METADATA_LUT[angular];
+                auto metadata_size = ORBITALS_METADATA_LUT_SIZE[angular];
 
                 for (size_t metadata_index = 0; metadata_index < metadata_size; metadata_index++)
                 {

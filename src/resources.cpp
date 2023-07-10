@@ -6,12 +6,12 @@
 
 resource_manager::resource_manager()
 {
-    archive* a = archive_read_new();
-    archive_read_support_format_tar(a);
-    auto r = archive_read_open_memory(a, assets_tar, assets_tar_len);
+    archive* archive = archive_read_new();
+    archive_read_support_format_tar(archive);
+    auto r = archive_read_open_memory(archive, assets_tar, assets_tar_len);
     archive_entry* entry = archive_entry_new();
 
-    while (archive_read_next_header(a, &entry) == ARCHIVE_OK)
+    while (archive_read_next_header(archive, &entry) == ARCHIVE_OK)
     {
         if(S_ISREG(archive_entry_filetype(entry)))
         {
@@ -19,10 +19,11 @@ resource_manager::resource_manager()
             std::vector<uint8_t> buf;
             buf.resize(size);
         
-            archive_read_data(a, (void*) buf.data(), size);
+            archive_read_data(archive, (void*) buf.data(), size);
             resources[archive_entry_pathname(entry)] = std::move(buf); 
         }
     }
-    archive_read_free(a);
+
+    archive_read_free(archive);
 }
 

@@ -1,6 +1,8 @@
 #include "hf/hf.h"
+#include "hf/basis.h"
 #include "hf/chem.h"
 #include "hf/gamma.h"
+#include <fmt/core.h>
 #include <glm/gtx/norm.hpp>
 #include <iostream>
 #include <ranges>
@@ -35,16 +37,16 @@ namespace
     auto canorg(const S_matrix& S) -> X_matrix
     {
         uint32_t size = S.rows();
-        Eigen::MatrixXd U;
-        std::vector<double> lambda;
-        compute_eigenvalues(S, U, lambda);
+        Eigen::MatrixXd eigenvectors;
+        std::vector<double> eigenvalues;
+        compute_eigenvalues(S, eigenvectors, eigenvalues);
         Eigen::MatrixXd D = Eigen::MatrixXd::Zero(size, size);
         for (uint32_t i = 0; i < size; i++)
         {
-            D(i, i) = 1.0 / std::sqrt(lambda[i]);
+            D(i, i) = 1.0 / std::sqrt(eigenvalues[i]);
         }
 
-        return U * (D * U.transpose());
+        return eigenvectors * (D * eigenvectors.transpose());
     }
 
     constexpr auto fact_ratio2(int64_t a, int64_t b) -> double { return fact(a) / fact(b) / fact(a - 2 * b); }
@@ -267,7 +269,10 @@ namespace
                 }
             }
         }
-        return 2 * pow(M_PI, 2.5) / (gamma1 * gamma2 * sqrt(gamma1 + gamma2)) * exp(-alphaa * alphab * rab2 / gamma1) *
+
+        static constexpr auto SQRT_PI_FIFTH = 17.493418327624862;
+
+        return 2 * SQRT_PI_FIFTH / (gamma1 * gamma2 * sqrt(gamma1 + gamma2)) * exp(-alphaa * alphab * rab2 / gamma1) *
                exp(-alphac * alphad * rcd2 / gamma2) * sum * norma * normb * normc * normd;
     }
 
@@ -307,7 +312,7 @@ namespace
         return sum;
     }
 
-    auto teindex(uint32_t i, uint32_t j, uint32_t k, uint32_t l) -> uint32_t
+    auto te_index(uint32_t i, uint32_t j, uint32_t k, uint32_t l) -> uint32_t
     {
         if (i < j)
         {
@@ -328,22 +333,21 @@ namespace
 
 } // namespace
 
-class HF
+class hartree_fock
 {
 public:
     std::shared_ptr<const molecule> mol;
     uint32_t orbital_count{};
     uint32_t atom_count{};
     uint32_t electron_count{};
-    uint32_t cntstep{};
-    uint32_t bss{0};
-    std::vector<std::string> orblist;
+    uint32_t step_count{};
+    std::vector<std::string> orbital_desc_list;
     std::vector<contracted_gaussian_functions> orbitals;
     H_matrix H;
     S_matrix S;
     T_matrix T;
     P_matrix P;
-    P_matrix Pnew;
+    P_matrix P_new;
     G_matrix G;
     F_matrix F;
     F_matrix Fp;
@@ -354,37 +358,32 @@ public:
     std::vector<V_matrix> V;
     std::vector<double> TE;
     std::vector<double> energies;
-    std::vector<double> itertimes;
-    std::vector<double> molorben;
+    std::vector<double> molorb_energy;
     double energy{};
-    double nucl_repul{};
+    double nuclear_repulsion{};
     double alpha{0.5};
 
-    HF() = default;
+    hartree_fock() = default;
 
-    void set_molecule(const std::shared_ptr<const molecule>& moll)
+    void set_molecule(const std::shared_ptr<const molecule>& target)
     {
-        mol = moll;
+        mol = target;
         electron_count = 0;
         energy = 0;
-        cntstep = 0;
-        uint32_t cnt = 0;
+        step_count = 0;
+        uint32_t count = 0;
         for (uint32_t i = 0; i < mol->atoms_count(); i++)
         {
             electron_count += mol->get_atoms()[i].electron_count();
             for (uint32_t j = 0; j < mol->get_atoms()[i].orbital_count(); j++)
             {
-                cnt++;
-                bss += mol->get_atoms()[i][j].orbs().size();
-                std::ostringstream oss;
-                oss << "[" << cnt << "] " << mol->get_atoms()[i].name() << i + 1 << "\t (" << mol->get_atoms()[i][j].type() << ")";
-                std::string str = oss.str();
-                orblist.push_back(str);
+                count++;
+                orbital_desc_list.push_back(fmt::format("[{}] {}{}\t ({})", count, mol->get_atoms()[i].name(), i + 1, mol->get_atoms()[i][j].type()));
                 orbitals.push_back(mol->get_atoms()[i][j]);
             }
         }
         electron_count -= mol->get_charge();
-        orbital_count = cnt;
+        orbital_count = count;
         atom_count = mol->atoms_count();
         S = Eigen::MatrixXd::Zero(orbital_count, orbital_count);
         H = Eigen::MatrixXd::Zero(orbital_count, orbital_count);
@@ -396,31 +395,31 @@ public:
         X = Eigen::MatrixXd::Zero(orbital_count, orbital_count);
         Xp = Eigen::MatrixXd::Zero(orbital_count, orbital_count);
         G = Eigen::MatrixXd::Zero(orbital_count, orbital_count);
-        for (auto& i : V)
+        for (auto& mat : V)
         {
-            i.resize(orbital_count, orbital_count);
+            mat.resize(orbital_count, orbital_count);
         }
-        TE.resize(teindex(orbital_count, orbital_count, orbital_count, orbital_count) + 1, -1.0);
+        TE.resize(te_index(orbital_count, orbital_count, orbital_count, orbital_count) + 1, -1.0);
     }
 
     auto run() -> hartree_fock_result
     {
         setup();
         uint32_t iter = iterate();
-        auto atoms = mol->get_atoms() | std::views::transform([](const atom& a) { return std::make_pair(a.proton_count(), a.pos()); });
+        auto atoms = mol->get_atoms() | std::views::transform([](const atom& ato) { return std::make_pair(ato.proton_count(), ato.pos()); });
         return {.iterations = iter,
-                .mo_energies = std::move(molorben),
+                .mo_energies = std::move(molorb_energy),
                 .coefficients = std::move(C),
                 .orbitals = std::move(orbitals),
                 .atoms = std::vector<std::pair<uint32_t, glm::dvec3>>(atoms.begin(), atoms.end()),
                 .electron_count = electron_count,
-                .homo_index = (electron_count + 1) / 2 - 1
-        };
+                .homo_index = (electron_count + 1) / 2 - 1,
+                .basis_name = mol->get_basis_name()};
     }
 
     void step()
     {
-        cntstep++;
+        step_count++;
         uint32_t index1 = 0;
         uint32_t index2 = 0;
         for (uint32_t i = 0; i < orbital_count; i++)
@@ -432,26 +431,26 @@ public:
                 {
                     for (uint32_t l = 0; l < orbital_count; l++)
                     {
-                        index1 = teindex(i, j, l, k);
-                        index2 = teindex(i, k, l, j);
+                        index1 = te_index(i, j, l, k);
+                        index2 = te_index(i, k, l, j);
                         G(i, j) += P(k, l) * (TE[index1] - 0.5 * TE[index2]);
                     }
                 }
             }
         }
-        F = (H + G);
-        Fp = (Xp * F * X);
-        compute_eigenvalues(Fp, Cc, molorben);
-        energy = calcen();
-        C = (X * Cc);
-        Pnew = Eigen::MatrixXd::Zero(orbital_count, orbital_count);
+        F = H + G;
+        Fp = Xp * F * X;
+        compute_eigenvalues(Fp, Cc, molorb_energy);
+        energy = calc_energy();
+        C = X * Cc;
+        P_new = Eigen::MatrixXd::Zero(orbital_count, orbital_count);
         for (uint32_t i = 0; i < orbital_count; i++)
         {
             for (uint32_t j = 0; j < orbital_count; j++)
             {
                 for (uint32_t k = 0; k < electron_count / 2; k++)
                 {
-                    Pnew(i, j) += 2.0 * C(i, k) * C(j, k);
+                    P_new(i, j) += 2.0 * C(i, k) * C(j, k);
                 }
             }
         }
@@ -459,7 +458,7 @@ public:
         {
             for (uint32_t j = 0; j < orbital_count; j++)
             {
-                P(i, j) = (1.0 - alpha) * Pnew(i, j) + alpha * P(i, j);
+                P(i, j) = (1.0 - alpha) * P_new(i, j) + alpha * P(i, j);
             }
         }
     }
@@ -512,7 +511,7 @@ public:
                         uint32_t kl = k * (k + 1) / 2 + l;
                         if (ij <= kl)
                         {
-                            uint32_t index = teindex(i, j, k, l);
+                            uint32_t index = te_index(i, j, k, l);
                             te_jobs.push_back({index, i, j, k, l});
                         }
                     }
@@ -527,25 +526,22 @@ public:
 
         X = canorg(S);
         Xp = X.transpose();
-        nucl_repul = calcnuclrepul();
+        nuclear_repulsion = calculate_nuclear_repulsion();
     }
 
     auto iterate() -> uint32_t
     {
-        double ediff = 1;
+        double energy_diff = 1;
         double oldenergy = 1000;
         uint32_t iter = 0;
-        double passed = 0;
 
-        while (ediff > 1e-9)
+        while (energy_diff > 1e-9)
         {
             iter++;
             step();
-            std::cout << std::setprecision(10);
-            ediff = std::abs(energy - oldenergy);
+            energy_diff = std::abs(energy - oldenergy);
             oldenergy = energy;
             energies.push_back(energy);
-            itertimes.push_back(passed);
 
             if (iter > 100)
             {
@@ -557,7 +553,7 @@ public:
         return iter;
     }
 
-    auto calcen() -> double
+    auto calc_energy() -> double
     {
         double energy = 0;
         Eigen::MatrixXd mat = (H * F);
@@ -568,27 +564,98 @@ public:
                 energy += P(j, i) * mat(i, j);
             }
         }
-        return energy * 0.5 + nucl_repul;
+        return energy * 0.5 + nuclear_repulsion;
     }
 
-    auto calcnuclrepul() -> double
+    auto calculate_nuclear_repulsion() -> double
     {
-        double repul = 0;
+        double repulsion = 0;
         for (uint32_t i = 0; i < atom_count; i++)
         {
             for (uint32_t j = i + 1; j < atom_count; j++)
             {
-                repul += mol->get_atoms()[i].proton_count() * mol->get_atoms()[j].proton_count() /
-                         glm::length(mol->get_atoms()[i].pos() - mol->get_atoms()[j].pos());
+                repulsion += mol->get_atoms()[i].proton_count() * mol->get_atoms()[j].proton_count() /
+                             glm::length(mol->get_atoms()[i].pos() - mol->get_atoms()[j].pos());
             }
         }
-        return repul;
+        return repulsion;
     }
 };
 
 auto solve(const std::shared_ptr<molecule>& molecule) -> hartree_fock_result
 {
-    HF hf;
-    hf.set_molecule(molecule);
-    return hf.run();
+    hartree_fock solver;
+    solver.set_molecule(molecule);
+    return solver.run();
+}
+
+void write_result(const hartree_fock_result& result, nlohmann::json& out_json)
+{
+    size_t mat_rows = result.coefficients.rows();
+    std::vector<double> coefficient_list(mat_rows * mat_rows);
+
+    for (size_t i = 0; i < mat_rows; i++)
+    {
+        for (size_t j = 0; j < mat_rows; j++)
+        {
+            coefficient_list[i * mat_rows + j] = result.coefficients(i, j);
+        }
+    }
+
+    nlohmann::json atoms(nlohmann::json::array_t{});
+
+    for (const auto& inst : result.atoms)
+    {
+        atoms.push_back({
+            inst.first,
+            inst.second.x,
+            inst.second.y,
+            inst.second.z,
+        });
+    }
+
+    out_json = {{"iterations", result.iterations},
+                {"mo_energies", result.mo_energies},
+                {"coefficient_n", mat_rows},
+                {"coefficients", coefficient_list},
+                {"atoms", atoms},
+                {"electron_count", result.electron_count},
+                {"homo_index", result.homo_index},
+                {"basis_name", result.basis_name},
+                {"type", "mo_output"}};
+}
+
+void read_result(hartree_fock_result& result, const nlohmann::json& in_json)
+{
+    result = {};
+
+    result.iterations = in_json.at("iterations");
+    result.mo_energies = in_json.at("mo_energies").get<std::vector<double>>();
+    result.electron_count = in_json.at("electron_count");
+    result.homo_index = in_json.at("homo_index");
+    result.basis_name = in_json.at("basis_name");
+
+    size_t mat_rows = in_json.at("coefficient_n");
+
+    result.coefficients.resize(mat_rows, mat_rows);
+    for (size_t i = 0; i < mat_rows; i++)
+    {
+        for (size_t j = 0; j < mat_rows; j++)
+        {
+            result.coefficients(i, j) = in_json.at("coefficients")[i * mat_rows + j];
+        }
+    }
+
+    auto basis = basis_manager::get_instance().get_basis(in_json.at("basis_name"));
+    for (const auto& [_, value] : in_json.at("atoms").items())
+    {
+        auto atomic_number = value[0].get<uint32_t>();
+        glm::dvec3 pos = {value[1].get<double>(), value[2].get<double>(), value[3].get<double>()};
+        result.atoms.emplace_back(atomic_number, pos);
+
+        for (const auto& atomic_no : basis->atom_data(atomic_number))
+        {
+            result.orbitals.emplace_back(pos, atomic_no);
+        }
+    }
 }

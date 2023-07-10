@@ -10,10 +10,10 @@
 
 namespace gl
 {
-    class glfont_handle : public singleton<glfont_handle>
+    class gl_text_handle : public singleton<gl_text_handle>
     {
     protected:
-        glfont_handle()
+        gl_text_handle()
         {
             if (!gltInit())
             {
@@ -21,16 +21,16 @@ namespace gl
             }
         }
 
-        ~glfont_handle()
+        ~gl_text_handle()
         {
             gltTerminate();
         }
     public:
     };
 
-    void draw_text(const std::string_view& str, glm::vec2 pos, float scale, glm::vec4 color, glm::vec4 bg)
+    void draw_text(const std::string_view& str, glm::vec2 pos, float scale, glm::vec4 color)
     {
-        glfont_handle::get_instance();
+        gl_text_handle::get_instance();
 
         GLTtext* text = gltCreateText();
         gltSetText(text, str.data());

@@ -3,7 +3,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #define make_shader_set_impl(func, type)                                                                                                             \
-    gl::shader_manager& gl::shader_manager::func(const std::string& name, type value)                                                                \
+    auto gl::shader_manager::func(const std::string& name, type value)->gl::shader_manager&                                                          \
     {                                                                                                                                                \
         expect((bool)current_shader, "current shader must be non-null to set uniform");                                                              \
         current_shader->func(name, value);                                                                                                           \
@@ -26,21 +26,22 @@ make_shader_set_impl(set_matrix, const glm::mat2&);
 make_shader_set_impl(set_matrix, const glm::mat3&);
 make_shader_set_impl(set_matrix, const glm::mat4&);
 
-gl::shader_manager& gl::shader_manager::add_shader(const std::string& name, std::string vertex_path, std::string fragment_path, std::string geom_path)
+auto gl::shader_manager::add_shader(const std::string& name, std::string vertex_path, std::string fragment_path, std::string geom_path)
+    -> gl::shader_manager&
 {
     expect_false(shaders.contains(name), fmt::format("Failed to add shader '{}', it already exists", name));
     shaders.emplace(name, std::make_shared<shader>(std::move(vertex_path), std::move(fragment_path), std::move(geom_path)));
     return *this;
 }
 
-gl::shader_manager& gl::shader_manager::delete_shader(const std::string& name)
+auto gl::shader_manager::delete_shader(const std::string& name) -> gl::shader_manager&
 {
     expect(shaders.contains(name), fmt::format("Failed to delete nonexistent shader '{}'", name));
     shaders.erase(name);
     return *this;
 }
 
-gl::shader_manager& gl::shader_manager::use_shader(const std::string& name)
+auto gl::shader_manager::use_shader(const std::string& name) -> gl::shader_manager&
 {
     expect(shaders.contains(name), fmt::format("Failed to use nonexistent shader '{}'", name));
     current_shader = shaders.at(name);
@@ -48,7 +49,7 @@ gl::shader_manager& gl::shader_manager::use_shader(const std::string& name)
     return *this;
 }
 
-gl::shader_manager& gl::shader_manager::push_shader(const std::string& new_shader)
+auto gl::shader_manager::push_shader(const std::string& new_shader) -> gl::shader_manager&
 {
     expect(shaders.contains(new_shader), fmt::format("Failed to switch to nonexistent shader '{}'", new_shader));
     shader_stack.push(std::move(current_shader));
@@ -57,7 +58,7 @@ gl::shader_manager& gl::shader_manager::push_shader(const std::string& new_shade
     return *this;
 }
 
-gl::shader_manager& gl::shader_manager::pop_shader()
+auto gl::shader_manager::pop_shader() -> gl::shader_manager&
 {
     expect_false(shader_stack.empty(), "Failed to pop shader stack, it is empty");
     current_shader = std::move(shader_stack.top());
@@ -66,23 +67,23 @@ gl::shader_manager& gl::shader_manager::pop_shader()
     return *this;
 }
 
-gl::shader_manager& gl::shader_manager::compile_shader(const std::string& name)
+auto gl::shader_manager::compile_shader(const std::string& name) -> gl::shader_manager&
 {
     expect(shaders.contains(name), fmt::format("Failed to compile nonexistent shader '{}'", name));
-    auto a = shaders.at(name);
-    a->compile();
+    auto shader = shaders.at(name);
+    shader->compile();
     return *this;
 }
 
-gl::shader_manager& gl::shader_manager::compile_shader(const std::string& name, const std::function<void(std::string)>& on_error)
+auto gl::shader_manager::compile_shader(const std::string& name, const std::function<void(std::string)>& on_error) -> gl::shader_manager&
 {
     expect(shaders.contains(name), fmt::format("Failed to compile nonexistent shader '{}'", name));
     shaders.at(name)->compile(on_error);
     return *this;
 }
 
-gl::shader_manager& gl::shader_manager::compile_shader(const std::string& name, const std::function<void(std::string)>& on_compile_error,
-                                                       const std::function<void(std::string)>& on_link_error)
+auto gl::shader_manager::compile_shader(const std::string& name, const std::function<void(std::string)>& on_compile_error,
+                                        const std::function<void(std::string)>& on_link_error) -> gl::shader_manager&
 {
     expect(shaders.contains(name), fmt::format("Failed to compile nonexistent shader '{}'", name));
     shaders.at(name)->compile(on_compile_error, on_link_error);

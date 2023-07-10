@@ -9,8 +9,11 @@
 #include "hf/chem.h"
 #include "hf/hf.h"
 #include "include/stacktrace.h"
+#include "nfd.h"
 #include "platform_dep.h"
+#include <GLFW/glfw3.h>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstring>
@@ -23,6 +26,7 @@
 #include <iomanip>
 #include <iostream>
 #include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
 #include <ostream>
 #include <ranges>
 #include <span>
@@ -30,27 +34,20 @@
 #include <utility>
 #include <vector>
 
-inline static constexpr std::pair<GLenum, const char*> GL_DEBUG_SOURCE[] = {{GL_DEBUG_SOURCE_API, "API"},
-                                                                            {GL_DEBUG_SOURCE_WINDOW_SYSTEM, "Window System"},
-                                                                            {GL_DEBUG_SOURCE_SHADER_COMPILER, "Shader Compiler"},
-                                                                            {GL_DEBUG_SOURCE_THIRD_PARTY, "Third Party"},
-                                                                            {GL_DEBUG_SOURCE_APPLICATION, "Application"},
-                                                                            {GL_DEBUG_SOURCE_OTHER, "Other"}};
-
-inline static constexpr std::pair<GLenum, const char*> GL_DEBUG_TYPE[] = {{GL_DEBUG_TYPE_ERROR, "Error"},
-                                                                          {GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR, "Deprecated Behavior"},
-                                                                          {GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR, "Undefined Behavior"},
-                                                                          {GL_DEBUG_TYPE_PORTABILITY, "Portability"},
-                                                                          {GL_DEBUG_TYPE_PERFORMANCE, "Performance"},
-                                                                          {GL_DEBUG_TYPE_MARKER, "Marker"},
-                                                                          {GL_DEBUG_TYPE_PUSH_GROUP, "Push Group"},
-                                                                          {GL_DEBUG_TYPE_POP_GROUP, "Pop Group"},
-                                                                          {GL_DEBUG_TYPE_OTHER, "Other"}};
-
-inline static constexpr std::pair<GLenum, const char*> GL_DEBUG_LEVEL[] = {{GL_DEBUG_SEVERITY_HIGH, "High"},
-                                                                           {GL_DEBUG_SEVERITY_MEDIUM, "Medium"},
-                                                                           {GL_DEBUG_SEVERITY_LOW, "Low"},
-                                                                           {GL_DEBUG_SEVERITY_NOTIFICATION, "Notification"}};
+inline static constexpr glm::dvec3 CUBE_CORNER_1 = {-6, -6, -6};
+inline static constexpr glm::dvec3 CUBE_CORNER_2 = {6, 6, 6};
+inline static constexpr int64_t MARGIN_BOTTOM = 20;
+inline static constexpr auto ATOM_SPHERE_RADIUS = 0.1;
+inline static constexpr uint32_t BOX_COLOR = 0xc8c8ff;
+inline static constexpr auto SUBDIVISION_COUNT = 20;
+inline static constexpr auto ISOLEVEL = 0.05;
+inline static constexpr auto SPHERE_SUBDIV_A = 0.02;
+inline static constexpr auto SPHERE_SUBDIV_B = 0.04;
+inline static constexpr glm::vec3 LIGHT_POS = {10, 10, 10};
+inline static constexpr auto FPS_UPDATE_TIME = 1000;
+inline static constexpr auto MOUSE_MOVE_FACTOR = 0.005;
+inline static constexpr auto MOUSE_ZOOM_FACTOR = 0.693;
+inline static constexpr auto EV_PER_HT = 27.211407953;
 
 class fps_calculator
 {
@@ -83,14 +80,14 @@ public:
         prev_tick = current_tick;
 
         // update the reported information
-        if (current_tick - prev_report_tick > 1000)
+        if (current_tick - prev_report_tick > FPS_UPDATE_TIME)
         {
-            reported_fps = frame_count * 1000. / double(current_tick - prev_report_tick);
+            reported_fps = frame_count * FPS_UPDATE_TIME / double(current_tick - prev_report_tick);
 
             // 1/(ms/frame) = frame/ms
             // frame/ms * 1000ms/s = frame/s
-            reported_min_fps = 1000. / min_ms;
-            reported_max_fps = 1000. / max_ms;
+            reported_min_fps = FPS_UPDATE_TIME / double(min_ms);
+            reported_max_fps = FPS_UPDATE_TIME / double(max_ms);
             prev_report_tick = current_tick;
             max_ms = INT_MIN;
             min_ms = INT_MAX;
@@ -103,6 +100,28 @@ public:
     [[nodiscard]] constexpr auto get_max_fps() const -> double { return reported_max_fps; }
 };
 
+inline static constexpr std::pair<GLenum, const char*> GL_DEBUG_SOURCE[] = {{GL_DEBUG_SOURCE_API, "api"},
+                                                                            {GL_DEBUG_SOURCE_WINDOW_SYSTEM, "window system"},
+                                                                            {GL_DEBUG_SOURCE_SHADER_COMPILER, "shader compiler"},
+                                                                            {GL_DEBUG_SOURCE_THIRD_PARTY, "third party"},
+                                                                            {GL_DEBUG_SOURCE_APPLICATION, "application"},
+                                                                            {GL_DEBUG_SOURCE_OTHER, "other"}};
+
+inline static constexpr std::pair<GLenum, const char*> GL_DEBUG_TYPE[] = {{GL_DEBUG_TYPE_ERROR, "error"},
+                                                                          {GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR, "deprecated behavior"},
+                                                                          {GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR, "undefined behavior"},
+                                                                          {GL_DEBUG_TYPE_PORTABILITY, "portability"},
+                                                                          {GL_DEBUG_TYPE_PERFORMANCE, "performance"},
+                                                                          {GL_DEBUG_TYPE_MARKER, "marker"},
+                                                                          {GL_DEBUG_TYPE_PUSH_GROUP, "push group"},
+                                                                          {GL_DEBUG_TYPE_POP_GROUP, "pop group"},
+                                                                          {GL_DEBUG_TYPE_OTHER, "other"}};
+
+inline static constexpr std::pair<GLenum, const char*> GL_DEBUG_LEVEL[] = {{GL_DEBUG_SEVERITY_HIGH, "high"},
+                                                                           {GL_DEBUG_SEVERITY_MEDIUM, "medium"},
+                                                                           {GL_DEBUG_SEVERITY_LOW, "low"},
+                                                                           {GL_DEBUG_SEVERITY_NOTIFICATION, "notification"}};
+
 auto string_lookup(GLenum value, const auto& stringList) -> const char*
 {
     for (const auto& pair : stringList)
@@ -112,7 +131,7 @@ auto string_lookup(GLenum value, const auto& stringList) -> const char*
             return pair.second;
         }
     }
-    return "Unknown";
+    return "unknown";
 }
 
 /*
@@ -136,11 +155,6 @@ void APIENTRY debugMessageCallback(GLenum source, GLenum type, GLuint id, GLenum
     std::cout << std::endl;
 }*/
 
-inline static constexpr glm::dvec3 CUBE_CORNER_1 = {-6, -6, -6};
-inline static constexpr glm::dvec3 CUBE_CORNER_2 = {6, 6, 6};
-inline static constexpr int64_t MARGIN_LEFT = 0;
-inline static constexpr int64_t MARGIN_BOTTOM = 20;
-
 class molorb_display
 {
     using atoms_vertex_buffer = gl::vertex_buffer<gl::vertex_buffer_cfg{.enable_normal = true, .enable_color = true}>;
@@ -151,6 +165,7 @@ class molorb_display
     atoms_vertex_buffer atoms_vb;
     bound_box_buffer bounding_box_vb;
     size_t mo_index = 0;
+    size_t render_time = 0;
     double rot_x = 0;
     double rot_y = 0;
     double zoom = 1;
@@ -174,67 +189,66 @@ class molorb_display
     {
         auto start = std::chrono::high_resolution_clock::now();
         iso.resize(result.orbitals.size());
-        std::cout << "Generating your MOs\n";
         for (size_t i = 0; i < result.orbitals.size(); i++)
         {
-            std::cout << "MO: " << i << '\n';
-            iso[i].isolevel_hf(result, i, CUBE_CORNER_1, CUBE_CORNER_2, 20, 0.05);
+            iso[i].isolevel_hf(result, i, CUBE_CORNER_1, CUBE_CORNER_2, SUBDIVISION_COUNT, ISOLEVEL);
         }
         auto stop = std::chrono::high_resolution_clock::now();
 
-        std::cout << "Time taken by function: " << (duration_cast<std::chrono::microseconds>(stop - start)).count() << " microseconds" << std::endl;
+        render_time = (duration_cast<std::chrono::milliseconds>(stop - start)).count();
     }
 
-    void draw_sphere(float r, glm::vec3 center, uint32_t color)
+    void draw_sphere(float radius, glm::vec3 center, uint32_t color)
     {
-        static constexpr float di = 0.02;
-        static constexpr float dj = 0.04;
-        static constexpr float db = di * 2 * M_PI;
-        static constexpr float da = dj * M_PI;
+        static constexpr float DELTA_B = SPHERE_SUBDIV_A * 2 * M_PI;
+        static constexpr float DELTA_A = SPHERE_SUBDIV_B * M_PI;
 
-        for (float i = 0; i < 1.0; i += di)
+        for (float i = 0; i < 1.0; i += SPHERE_SUBDIV_A)
         {
-            for (float j = 0; j < 1.0; j += dj)
+            for (float j = 0; j < 1.0; j += SPHERE_SUBDIV_B)
             {
                 float b = i * 2 * M_PI;
                 float a = (j - 0.5) * M_PI;
 
-                gl::vec3 normal = {std::cos(a + da / 2) * std::cos(b + db / 2), std::cos(a + da / 2) * std::sin(b + db / 2), std::sin(a + da / 2)};
-                gl::vec3 p0(r * std::cos(a) * std::cos(b), r * std::cos(a) * std::sin(b), r * std::sin(a));
-                gl::vec3 p1(r * std::cos(a) * std::cos(b + db), r * std::cos(a) * std::sin(b + db), r * std::sin(a));
-                gl::vec3 p2(r * std::cos(a + da) * std::cos(b + db), r * std::cos(a + da) * std::sin(b + db), r * std::sin(a + da));
-                gl::vec3 p3(r * std::cos(a + da) * std::cos(b), r * std::cos(a + da) * std::sin(b), r * std::sin(a + da));
+                gl::vec3 normal = {std::cos(a + DELTA_A / 2) * std::cos(b + DELTA_B / 2), std::cos(a + DELTA_A / 2) * std::sin(b + DELTA_B / 2),
+                                   std::sin(a + DELTA_A / 2)};
+                gl::vec3 pt0(radius * std::cos(a) * std::cos(b), radius * std::cos(a) * std::sin(b), radius * std::sin(a));
+                gl::vec3 pt1(radius * std::cos(a) * std::cos(b + DELTA_B), radius * std::cos(a) * std::sin(b + DELTA_B), radius * std::sin(a));
+                gl::vec3 pt2(radius * std::cos(a + DELTA_A) * std::cos(b + DELTA_B), radius * std::cos(a + DELTA_A) * std::sin(b + DELTA_B),
+                             radius * std::sin(a + DELTA_A));
+                gl::vec3 pt3(radius * std::cos(a + DELTA_A) * std::cos(b), radius * std::cos(a + DELTA_A) * std::sin(b),
+                             radius * std::sin(a + DELTA_A));
 
-                atoms_vb.vert(atoms_vertex_buffer::builder().vert(p0 + center).color(color).normal(normal).end());
-                atoms_vb.vert(atoms_vertex_buffer::builder().vert(p1 + center).color(color).normal(normal).end());
-                atoms_vb.vert(atoms_vertex_buffer::builder().vert(p2 + center).color(color).normal(normal).end());
+                atoms_vb.vert(atoms_vertex_buffer::builder().vert(pt0 + center).color(color).normal(normal).end());
+                atoms_vb.vert(atoms_vertex_buffer::builder().vert(pt1 + center).color(color).normal(normal).end());
+                atoms_vb.vert(atoms_vertex_buffer::builder().vert(pt2 + center).color(color).normal(normal).end());
 
-                atoms_vb.vert(atoms_vertex_buffer::builder().vert(p2 + center).color(color).normal(normal).end());
-                atoms_vb.vert(atoms_vertex_buffer::builder().vert(p3 + center).color(color).normal(normal).end());
-                atoms_vb.vert(atoms_vertex_buffer::builder().vert(p0 + center).color(color).normal(normal).end());
+                atoms_vb.vert(atoms_vertex_buffer::builder().vert(pt2 + center).color(color).normal(normal).end());
+                atoms_vb.vert(atoms_vertex_buffer::builder().vert(pt3 + center).color(color).normal(normal).end());
+                atoms_vb.vert(atoms_vertex_buffer::builder().vert(pt0 + center).color(color).normal(normal).end());
             }
         }
     }
 
-#define select(n, v) ((EDGES[i] & (1 << (n))) ? (CUBE_CORNER_1.v) : (CUBE_CORNER_2.v))
+#define select(n, v) (edge & (1 << (n))) ? (CUBE_CORNER_1.v) : (CUBE_CORNER_2.v)
 
     void generate_atoms()
     {
         // reset the vb
         atoms_vb = atoms_vertex_buffer();
-        for (const auto& i : result.atoms)
+        for (const auto& atom : result.atoms)
         {
-            draw_sphere(0.1, i.second, ELEMENT_COLORS[i.first - 1]);
+            draw_sphere(ATOM_SPHERE_RADIUS, atom.second, ELEMENT_COLORS[atom.first - 1]);
         }
         atoms_vb.bake();
 
-        static constexpr uint8_t EDGES[12] = {0b000100, 0b100110, 0b110010, 0b010000, 0b001101, 0b101111,
-                                              0b111011, 0b011001, 0b000001, 0b100101, 0b110111, 0b010011};
+        static constexpr std::array<uint8_t, 12> EDGES = {0b000100, 0b100110, 0b110010, 0b010000, 0b001101, 0b101111,
+                                                          0b111011, 0b011001, 0b000001, 0b100101, 0b110111, 0b010011};
 
-        for (uint8_t i = 0; i < 12; i++)
+        for (auto edge : EDGES)
         {
-            bounding_box_vb.vert(bound_box_buffer::builder().vert(select(0, x), select(1, y), select(2, z)).color(0xc8c8ff).end());
-            bounding_box_vb.vert(bound_box_buffer::builder().vert(select(3, x), select(4, y), select(5, z)).color(0xc8c8ff).end());
+            bounding_box_vb.vert(bound_box_buffer::builder().vert(select(0, x), select(1, y), select(2, z)).color(BOX_COLOR).end());
+            bounding_box_vb.vert(bound_box_buffer::builder().vert(select(3, x), select(4, y), select(5, z)).color(BOX_COLOR).end());
         }
         bounding_box_vb.bake();
     }
@@ -248,7 +262,7 @@ class molorb_display
                 .compile_shader("atoms_shader");
             render.get_shader_manager()
                 .push_shader("atoms_shader")
-                .set_vec_float("diffuse_pos", {10, 10, 10})
+                .set_vec_float("diffuse_pos", LIGHT_POS)
                 .set_vec_float("diffuse_color", {1, 1, 1})
                 .set_vec_float("ambient_color", {1, 1, 1});
         }
@@ -299,6 +313,29 @@ public:
         case GLFW_KEY_C:
             display_box = !display_box;
             break;
+        case GLFW_KEY_S:
+            if (mods & GLFW_MOD_CONTROL)
+            {
+                char* out_path = nullptr;
+                nfdfilteritem_t filter[1] = {{"Molecular Orbital Output File", "json"}};
+                if (NFD_SaveDialog(&out_path, filter, 1, ".", "mo_solution.json") != NFD_OKAY)
+                {
+                    break;
+                }
+
+                std::string out(out_path);
+                NFD_FreePathN(out_path);
+                std::ofstream ofs(out);
+                if (!ofs)
+                {
+                    throw std::runtime_error("failed to save to file " + out);
+                }
+
+                nlohmann::json json;
+                write_result(result, json);
+                ofs << json;
+            }
+            break;
         default:
             break;
         }
@@ -306,8 +343,8 @@ public:
 
     void mouse_dragged(double delta_x, double delta_y)
     {
-        rot_x += delta_y * 0.005f;
-        rot_y += delta_x * -0.005f;
+        rot_x += delta_y * MOUSE_MOVE_FACTOR;
+        rot_y += delta_x * -MOUSE_MOVE_FACTOR;
     }
 
     void mouse_button_pressed(int button, int mods)
@@ -329,21 +366,20 @@ public:
 
     void render(gl::render_manager& render)
     {
-        render.view().push().mult(glm::lookAt(glm::vec3(10 * std::exp(zoom * 0.693), 0, 0), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)));
+        render.view().push().mult(glm::lookAt(glm::vec3(10 * std::exp(zoom * MOUSE_ZOOM_FACTOR), 0, 0), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)));
         render.model().push().rotate(rot_x, 0, 0, 1).rotate(rot_y, 0, 1, 0);
 
         gl::gl_check();
 
         if (display_mo)
         {
-            iso[mo_index].draw(render);
+            iso[mo_index].draw(render, LIGHT_POS);
         }
+
         draw_static(render);
 
         render.model().pop();
         render.view().pop();
-
-        static constexpr auto EV_PER_HT = 27.211407953;
 
         int electron_in_orbital = int(result.electron_count) - int(mo_index * 2);
         std::string electron_desc;
@@ -365,22 +401,30 @@ public:
             electron_desc = fmt::format("Electrons: 0 (Unoccupied, LUMO+{})", mo_index - result.homo_index - 1);
         }
 
-        gl::draw_text(fmt::format(
-            "Info:\n"
-            "  Iterations: {}\n"
-            "  Electrons: {}\n"
-            "MO Info:\n"
-            "  MO #{}\n"
-            "  E: {:.4f} eV\n"
-            "  {}", result.iterations,result.electron_count, mo_index + 1, result.mo_energies[mo_index] * EV_PER_HT, electron_desc), {3, 0});
+        gl::draw_text(fmt::format("Info:\n"
+                                  "  Iterations: {}\n"
+                                  "  Electrons: {}\n"
+                                  "  Render time: {}ms\n"
+                                  "MO Info:\n"
+                                  "  MO #{}\n"
+                                  "  E: {:.4f} eV\n"
+                                  "  {}",
+                                  result.iterations, result.electron_count, render_time, mo_index + 1, result.mo_energies[mo_index] * EV_PER_HT,
+                                  electron_desc),
+                      {3, 0});
     }
 };
 
-static auto format_status(const fps_calculator& fps) -> std::string
+inline static constexpr auto MiB_SIZE = 1024 * 1024;
+
+namespace
 {
-    return fmt::format(PROJECT_NAME " v" VERSION " - c++ = " MESON_CXX_COMPILER " - {:.2f} MiB - {}/{}/{} FPS", memory_used() / double(1024),
-                       (size_t)fps.get_fps(), (size_t)fps.get_max_fps(), (size_t)fps.get_min_fps());
-}
+    auto format_status(const fps_calculator& fps) -> std::string
+    {
+        return fmt::format(PROJECT_NAME " v" VERSION " - " MESON_CXX_COMPILER "/" MESON_C_COMPILER " - {:.2f} MiB - {}/{}/{} FPS",
+                           memory_used() / double(MiB_SIZE), (size_t)fps.get_fps(), (size_t)fps.get_max_fps(), (size_t)fps.get_min_fps());
+    }
+} // namespace
 
 class mol_orbital : public gl::window
 {
@@ -422,21 +466,21 @@ protected:
 
     void key_released(int key, int scancode, int mods) override {}
 
-    void mouse_moved(double xpos, double ypos) override
+    void mouse_moved(double mouse_x, double mouse_y) override
     {
-        double dx = xpos - prev_mouse_x;
-        double dy = ypos - prev_mouse_y;
+        double delta_x = mouse_x - prev_mouse_x;
+        double delta_y = mouse_y - prev_mouse_y;
 
-        if (dx != NAN)
+        if (delta_x != NAN)
         {
             if (is_left_pressed)
             {
-                molorb_ui.mouse_dragged(dx, dy);
+                molorb_ui.mouse_dragged(delta_x, delta_y);
             }
         }
 
-        prev_mouse_x = xpos;
-        prev_mouse_y = ypos;
+        prev_mouse_x = mouse_x;
+        prev_mouse_y = mouse_y;
     }
 
     void mouse_button_pressed(int button, int mods) override
@@ -479,22 +523,25 @@ protected:
     }
 
 public:
-    mol_orbital(int a, int b, const char* c, hartree_fock_result result) : gl::window(a, b, c), molorb_ui(std::move(result)) {}
+    mol_orbital(int width, int height, const char* name, hartree_fock_result result) : gl::window(width, height, name), molorb_ui(std::move(result))
+    {
+    }
 };
 
-auto main(int argc, char* argv[]) -> int
+auto main(int argc, const char* argv[]) -> int
 {
+    std::span<const char*> args(argv, argc);
     try
     {
         std::string filename;
 
         if (argc != 2)
         {
-            std::cerr << "usage: " << argv[0] << " [filename]\n";
+            std::cerr << "usage: " << args[0] << " [filename]\n";
             exit(-1);
         }
 
-        filename = argv[1];
+        filename = args[1];
 
         basis_manager::get_instance().register_basis("sto-2g");
         basis_manager::get_instance().register_basis("sto-3g");
@@ -502,11 +549,28 @@ auto main(int argc, char* argv[]) -> int
         basis_manager::get_instance().register_basis("sto-5g");
         basis_manager::get_instance().register_basis("sto-6g");
 
-        auto mol = molecule::read_from_file(filename);
+        std::ifstream ifs(filename);
+        if (!ifs)
+        {
+            std::cerr << "failed to open file: " << filename << '\n';
+            exit(-1);
+        }
 
-        std::cout << "solving\n";
-        auto res = solve(mol);
-        mol_orbital window(1000, 1000, "Molecular Orbitals", std::move(res));
+        auto json = nlohmann::json::parse(ifs);
+        hartree_fock_result result;
+
+        if (json.value("type", "") == "mo_output")
+        {
+            read_result(result, json);
+        }
+        else
+        {
+            auto mol = molecule::read_from_file(json);
+            std::cout << "solving\n";
+            result = solve(mol);
+        }
+
+        mol_orbital window(1000, 1000, "Molecular Orbitals", std::move(result));
 
         window.run();
         return 0;
@@ -521,12 +585,6 @@ auto main(int argc, char* argv[]) -> int
     {
         std::cerr << fmt::format("unhandled exception was received: {}\n", err.what());
         exit(-1);
-    }
-    if (argc == 1)
-    {
-        std::cout << "Usage: " << argv[0] << " <input file>" << std::endl;
-        std::cout << "Please provide a valid input file" << std::endl;
-        return 0;
     }
 }
 

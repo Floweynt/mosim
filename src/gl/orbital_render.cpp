@@ -17,6 +17,8 @@ struct GTO
     uint32_t n;
 };
 
+inline static constexpr auto BUFFER_SIZE = 1024 * 1024 * 4;
+
 void hf_isosurface::isolevel_hf(const hartree_fock_result& result, uint32_t which_mo, glm::vec3 start, glm::vec3 end, size_t detail, float isolevel)
 {
     static gl::compute_shader shader("assets/shaders/render_cloud_compute.glsl");
@@ -32,7 +34,7 @@ void hf_isosurface::isolevel_hf(const hartree_fock_result& result, uint32_t whic
     shader.set_uint("gto_per_orbital", result.orbitals[0].get_data().orbs().size());
 
     // set output buffer
-    vbo.init_empty(1024 * 1024 * 4, GL_STATIC_DRAW);
+    vbo.init_empty(BUFFER_SIZE, GL_STATIC_DRAW);
     vbo.write(0, uint32_t(0));
 
     // setup coefficient buffer
@@ -40,7 +42,7 @@ void hf_isosurface::isolevel_hf(const hartree_fock_result& result, uint32_t whic
     std::vector<float> coeff(result.coefficients.cols());
     for (size_t i = 0; i < result.coefficients.cols(); i++)
     {
-        coeff[i] = result.coefficients(i, which_mo);
+        coeff[i] = (float)result.coefficients(i, which_mo);
     }
     mo_coeff_buffer.init(std::span(coeff), GL_STATIC_DRAW);
 
@@ -70,7 +72,7 @@ void hf_isosurface::isolevel_hf(const hartree_fock_result& result, uint32_t whic
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, 0);
 
-    nverts = vbo.read<uint32_t>(0) / 2;
+    vert_count = vbo.read<uint32_t>(0) / 2;
     vao.bind_vbo(vbo, 0, 4 * sizeof(float), 8 * sizeof(float));
     vao.format(0, 4, GL_FLOAT, false, 0);
     vao.enable_attribute(0);
@@ -80,7 +82,7 @@ void hf_isosurface::isolevel_hf(const hartree_fock_result& result, uint32_t whic
     vao.set_attribute_buffer_bind(1, 0);
 }
 
-void hf_isosurface::draw(gl::render_manager& render)
+void hf_isosurface::draw(gl::render_manager& render, glm::vec3 light_pos)
 {
     if (!render.get_shader_manager().has_shader("__hf_isosurface"))
     {
@@ -92,12 +94,12 @@ void hf_isosurface::draw(gl::render_manager& render)
 
     render.get_shader_manager()
         .push_shader("__hf_isosurface")
-        .set_vec_float("diffuse_pos", {6, 6, 6})
+        .set_vec_float("diffuse_pos", light_pos)
         .set_vec_float("diffuse_color", {1, 1, 1})
         .set_vec_float("ambient_color", {1, 1, 1})
         .set_float("ambient_strength", 0.5);
 
-    render.render_generic([this]() { vao.draw(GL_POINTS, 0, nverts); });
+    render.render_generic([this]() { vao.draw(GL_POINTS, 0, vert_count); });
     render.get_shader_manager().pop_shader();
 }
 

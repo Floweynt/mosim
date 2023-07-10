@@ -1,6 +1,6 @@
 
-#include "gl/glstate.h"
 #include "gl/shader.h"
+#include "gl/glstate.h"
 #include "resources.h"
 #include "util.h"
 #include <fmt/core.h>
@@ -10,23 +10,27 @@
 #include <iostream>
 #include <sstream>
 
-static bool check_compile_error(unsigned int shader, const std::function<void(std::string)>& on_fail)
+inline static constexpr auto DEFAULT_ERROR_LOG_SIZE = 4096;
+
+static auto check_compile_error(unsigned int shader, const std::function<void(std::string)>& on_fail) -> bool
 {
-    int success;
+    int success = 0;
     glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
     gl::gl_check();
 
     if (!success)
     {
-        int len;
+        int len = 0;
         glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
         gl::gl_check();
-        if (len < 0)
-            len = 4096;
+        if (len <= 0)
+        {
+            len = DEFAULT_ERROR_LOG_SIZE;
+        }
 
         std::string msg;
         msg.resize(len);
-        glGetShaderInfoLog(shader, len, NULL, msg.data());
+        glGetShaderInfoLog(shader, len, nullptr, msg.data());
         gl::gl_check();
         on_fail(std::move(msg));
         return false;
@@ -35,23 +39,25 @@ static bool check_compile_error(unsigned int shader, const std::function<void(st
     return true;
 }
 
-static bool check_link_error(unsigned int shader, const std::function<void(std::string)>& on_fail)
+static auto check_link_error(unsigned int shader, const std::function<void(std::string)>& on_fail) -> bool
 {
-    int success;
+    int success = 0;
     glGetProgramiv(shader, GL_LINK_STATUS, &success);
     gl::gl_check();
 
     if (!success)
     {
-        int len;
+        int len = 0;
         glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
         gl::gl_check();
         if (len < 0)
-            len = 4096;
+        {
+            len = DEFAULT_ERROR_LOG_SIZE;
+        }
 
         std::string msg;
         msg.resize(len);
-        glGetShaderInfoLog(shader, len, NULL, msg.data());
+        glGetShaderInfoLog(shader, len, nullptr, msg.data());
         gl::gl_check();
         on_fail(std::move(msg));
         return false;
@@ -60,15 +66,15 @@ static bool check_link_error(unsigned int shader, const std::function<void(std::
     return true;
 }
 
-bool gl::basic_shader::compile()
+auto gl::basic_shader::compile() -> bool
 {
     return compile([](std::string str) { throw shader_error("failed to compile shader", std::move(str)); },
                    [](std::string str) { throw shader_error("failed to link shader", std::move(str)); });
 }
 
-bool gl::basic_shader::compile(err_hdl_t on_error) { return compile(on_error, on_error); }
+auto gl::basic_shader::compile(err_hdl_t on_error) -> bool { return compile(on_error, on_error); }
 
-bool gl::basic_shader::compile(err_hdl_t on_compile_error, err_hdl_t on_link_error) { return do_compile(on_compile_error, on_link_error); }
+auto gl::basic_shader::compile(err_hdl_t on_compile_error, err_hdl_t on_link_error) -> bool { return do_compile(on_compile_error, on_link_error); }
 
 void gl::basic_shader::use() const
 {
@@ -92,7 +98,7 @@ void gl::basic_shader::dispose()
 
 gl::basic_shader::~basic_shader() { dispose(); }
 
-bool gl::shader::do_compile(err_hdl_t on_compile_error, err_hdl_t on_link_error)
+auto gl::shader::do_compile(err_hdl_t on_compile_error, err_hdl_t on_link_error) -> bool
 {
     const auto& fragment_data = resource_manager::get_instance().get_resource(fragment_path);
     std::string fragment_str(fragment_data.begin(), fragment_data.end());
@@ -188,7 +194,7 @@ bool gl::shader::do_compile(err_hdl_t on_compile_error, err_hdl_t on_link_error)
     return success;
 }
 
-bool gl::compute_shader::do_compile(err_hdl_t on_compile_error, err_hdl_t on_link_error)
+auto gl::compute_shader::do_compile(err_hdl_t on_compile_error, err_hdl_t on_link_error) -> bool
 {
     const auto& shader_data = resource_manager::get_instance().get_resource(path);
     std::string shader_str(shader_data.begin(), shader_data.end());
@@ -226,7 +232,7 @@ bool gl::compute_shader::do_compile(err_hdl_t on_compile_error, err_hdl_t on_lin
     return success;
 }
 
-int gl::basic_shader::validate_uniform_set(const std::string& name)
+auto gl::basic_shader::validate_uniform_set(const std::string& name) -> int
 {
     expect(get_id() != 0, "current shader must be valid");
     int loc = glGetUniformLocation(get_id(), name.c_str());
@@ -235,105 +241,105 @@ int gl::basic_shader::validate_uniform_set(const std::string& name)
     return loc;
 }
 
-gl::basic_shader& gl::basic_shader::set_int(const std::string& name, int value)
+auto gl::basic_shader::set_int(const std::string& name, int value) -> gl::basic_shader&
 {
     glProgramUniform1i(get_id(), validate_uniform_set(name), value);
     gl::gl_check();
     return *this;
 }
 
-gl::basic_shader& gl::basic_shader::set_vec_int(const std::string& name, glm::vec<2, std::int32_t> value)
+auto gl::basic_shader::set_vec_int(const std::string& name, glm::vec<2, std::int32_t> value) -> gl::basic_shader&
 {
     glProgramUniform2i(get_id(), validate_uniform_set(name), value[0], value[1]);
     gl::gl_check();
     return *this;
 }
 
-gl::basic_shader& gl::basic_shader::set_vec_int(const std::string& name, glm::vec<3, std::int32_t> value)
+auto gl::basic_shader::set_vec_int(const std::string& name, glm::vec<3, std::int32_t> value) -> gl::basic_shader&
 {
     glProgramUniform3i(get_id(), validate_uniform_set(name), value[0], value[1], value[2]);
     gl::gl_check();
     return *this;
 }
 
-gl::basic_shader& gl::basic_shader::set_vec_int(const std::string& name, glm::vec<4, std::int32_t> value)
+auto gl::basic_shader::set_vec_int(const std::string& name, glm::vec<4, std::int32_t> value) -> gl::basic_shader&
 {
     glProgramUniform4i(get_id(), validate_uniform_set(name), value[0], value[1], value[2], value[3]);
     gl::gl_check();
     return *this;
 }
 
-gl::basic_shader& gl::basic_shader::set_float(const std::string& name, float value)
+auto gl::basic_shader::set_float(const std::string& name, float value) -> gl::basic_shader&
 {
     glProgramUniform1f(get_id(), validate_uniform_set(name), value);
     gl::gl_check();
     return *this;
 }
 
-gl::basic_shader& gl::basic_shader::set_vec_float(const std::string& name, glm::vec2 value)
+auto gl::basic_shader::set_vec_float(const std::string& name, glm::vec2 value) -> gl::basic_shader&
 {
     glProgramUniform2f(get_id(), validate_uniform_set(name), value[0], value[1]);
     gl::gl_check();
     return *this;
 }
 
-gl::basic_shader& gl::basic_shader::set_vec_float(const std::string& name, glm::vec3 value)
+auto gl::basic_shader::set_vec_float(const std::string& name, glm::vec3 value) -> gl::basic_shader&
 {
     glProgramUniform3f(get_id(), validate_uniform_set(name), value[0], value[1], value[2]);
     gl::gl_check();
     return *this;
 }
 
-gl::basic_shader& gl::basic_shader::set_vec_float(const std::string& name, glm::vec4 value)
+auto gl::basic_shader::set_vec_float(const std::string& name, glm::vec4 value) -> gl::basic_shader&
 {
     glProgramUniform4f(get_id(), validate_uniform_set(name), value[0], value[1], value[2], value[3]);
     gl::gl_check();
     return *this;
 }
 
-gl::basic_shader& gl::basic_shader::set_uint(const std::string& name, uint value)
+auto gl::basic_shader::set_uint(const std::string& name, uint value) -> gl::basic_shader&
 {
     glProgramUniform1ui(get_id(), validate_uniform_set(name), value);
     gl::gl_check();
     return *this;
 }
 
-gl::basic_shader& gl::basic_shader::set_vec_uint(const std::string& name, glm::vec<2, std::uint32_t> value)
+auto gl::basic_shader::set_vec_uint(const std::string& name, glm::vec<2, std::uint32_t> value) -> gl::basic_shader&
 {
     glProgramUniform2ui(get_id(), validate_uniform_set(name), value[0], value[1]);
     gl::gl_check();
     return *this;
 }
 
-gl::basic_shader& gl::basic_shader::set_vec_uint(const std::string& name, glm::vec<3, std::uint32_t> value)
+auto gl::basic_shader::set_vec_uint(const std::string& name, glm::vec<3, std::uint32_t> value) -> gl::basic_shader&
 {
     glProgramUniform3ui(get_id(), validate_uniform_set(name), value[0], value[1], value[2]);
     gl::gl_check();
     return *this;
 }
 
-gl::basic_shader& gl::basic_shader::set_vec_uint(const std::string& name, glm::vec<4, std::uint32_t> value)
+auto gl::basic_shader::set_vec_uint(const std::string& name, glm::vec<4, std::uint32_t> value) -> gl::basic_shader&
 {
     glProgramUniform4ui(get_id(), validate_uniform_set(name), value[0], value[1], value[2], value[3]);
     gl::gl_check();
     return *this;
 }
 
-gl::basic_shader& gl::basic_shader::set_matrix(const std::string& name, const glm::mat2& matrix)
+auto gl::basic_shader::set_matrix(const std::string& name, const glm::mat2& matrix) -> gl::basic_shader&
 {
     glProgramUniformMatrix2fv(get_id(), validate_uniform_set(name), 1, GL_FALSE, glm::value_ptr(matrix));
     gl::gl_check();
     return *this;
 }
 
-gl::basic_shader& gl::basic_shader::set_matrix(const std::string& name, const glm::mat3& matrix)
+auto gl::basic_shader::set_matrix(const std::string& name, const glm::mat3& matrix) -> gl::basic_shader&
 {
     glProgramUniformMatrix3fv(get_id(), validate_uniform_set(name), 1, GL_FALSE, glm::value_ptr(matrix));
     gl::gl_check();
     return *this;
 }
 
-gl::basic_shader& gl::basic_shader::set_matrix(const std::string& name, const glm::mat4& matrix)
+auto gl::basic_shader::set_matrix(const std::string& name, const glm::mat4& matrix) -> gl::basic_shader&
 {
     glProgramUniformMatrix4fv(get_id(), validate_uniform_set(name), 1, GL_FALSE, glm::value_ptr(matrix));
     gl::gl_check();

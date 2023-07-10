@@ -2,38 +2,44 @@
 #include <GL/glew.h>
 // dont reorder
 #include "gl/window.h"
+#include "nfd.h"
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <GLFW/glfw3.h>
+#include <fmt/core.h>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/glm.hpp>
 #include <iostream>
+#include <stdexcept>
 
 gl::window::window(int width, int height, const char* name)
 {
     glfwWindowHint(GLFW_SAMPLES, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
-    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
+    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
 
     GLFWwindow* win = glfwCreateWindow(width, height, name, nullptr, nullptr);
 
     if (!win)
+    {
         throw std::runtime_error("Failed to open GLFW window");
+    }
 
     glfwMakeContextCurrent(win);
     auto glew_ret = glewInit();
     if (glew_ret != GLEW_OK)
     {
-        std::cerr << "Failed to initialize GLEW: msg=" << glewGetErrorString(glew_ret) << "\n";
-        std::exit(-1);
+        throw std::runtime_error(fmt::format("Failed to initialize GLEW: {}", (const char*)glewGetErrorString(glew_ret)));
     }
 
     glfwMakeContextCurrent(win);
     glfwSetWindowUserPointer(win, this);
+
+    // setup callbacks for the event handler functions
     glfwSetKeyCallback(
-        win, +[](GLFWwindow* w, int key, int scancode, int action, int mods) {
-            window* that = (window*)glfwGetWindowUserPointer(w);
+        win, +[](GLFWwindow* win, int key, int scancode, int action, int mods) {
+            auto* that = (window*)glfwGetWindowUserPointer(win);
             if (action == GLFW_PRESS)
             {
                 that->key_pressed(key, scancode, mods);
@@ -43,9 +49,10 @@ gl::window::window(int width, int height, const char* name)
                 that->key_released(key, scancode, mods);
             }
         });
+
     glfwSetMouseButtonCallback(
-        win, +[](GLFWwindow* w, int button, int action, int mods) {
-            window* that = (window*)glfwGetWindowUserPointer(w);
+        win, +[](GLFWwindow* win, int button, int action, int mods) {
+            auto* that = (window*)glfwGetWindowUserPointer(win);
             if (action == GLFW_PRESS)
             {
                 that->mouse_button_pressed(button, mods);
@@ -57,15 +64,17 @@ gl::window::window(int width, int height, const char* name)
         });
 
     glfwSetScrollCallback(
-        win, +[](GLFWwindow* w, double x, double y) {
-            window* that = (window*)glfwGetWindowUserPointer(w);
+        win, +[](GLFWwindow* win, double x, double y) {
+            auto* that = (window*)glfwGetWindowUserPointer(win);
             that->mouse_scrolled(x, y);
         });
+
     glfwSetCursorPosCallback(
-        win, +[](GLFWwindow* w, double mouse_x, double mouse_y) {
-            window* that = (window*)glfwGetWindowUserPointer(w);
+        win, +[](GLFWwindow* win, double mouse_x, double mouse_y) {
+            auto* that = (window*)glfwGetWindowUserPointer(win);
             that->mouse_moved(mouse_x, mouse_y);
         });
+
     glfwSwapInterval(1);
 
     glEnable(GL_DEPTH_TEST);
@@ -75,9 +84,12 @@ gl::window::window(int width, int height, const char* name)
     this->win = win;
 }
 
-gl::window::~window() { glfwDestroyWindow(win); }
+gl::window::~window()
+{
+    glfwDestroyWindow(win);
+}
 
-void gl::window::close() { glfwSetWindowShouldClose(win, GL_TRUE); }
+void gl::window::close() { glfwSetWindowShouldClose(win, GLFW_TRUE); }
 
 void gl::window::run()
 {
@@ -85,7 +97,8 @@ void gl::window::run()
 
     while (!glfwWindowShouldClose(win))
     {
-        GLint window_width, window_height;
+        GLint window_width = 0;
+        GLint window_height = 0;
         glfwGetWindowSize(win, &window_width, &window_height);
         glViewport(0, 0, window_width, window_height);
 

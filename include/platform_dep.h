@@ -32,22 +32,13 @@ size_t memory_used(bool resident = false)
     std::ifstream stat_stream("/proc/self/stat", std::ios_base::in);
 
     // dummy vars for leading entries in stat that we don't care about
-    //
-    std::string pid, comm, state, ppid, pgrp, session, tty_nr;
-    std::string tpgid;
-    std::string flags;
-    std::string minflt;
-    std::string cminflt;
-    std::string majflt;
-    std::string cmajflt;
-    std::string utime, stime, cutime, cstime, priority, nice;
-    std::string O, itrealvalue, starttime;
-    unsigned long vsize;
-    stat_stream >> pid >> comm >> state >> ppid >> pgrp >> session >> tty_nr >> tpgid >> flags >> minflt >> cminflt >> majflt >> cmajflt >> utime >>
-        stime >> cutime >> cstime >> priority >> nice >> O >> itrealvalue >> starttime >> vsize;
+    std::string discard;
+    unsigned long vsize = 0;
+    stat_stream >> discard >> discard >> discard >> discard >> discard >> discard >> discard >> discard >> discard >> discard >> discard >> discard >> discard >> discard >>
+        discard >> discard >> discard >> discard >> discard >> discard >> discard >> discard >> vsize;
     stat_stream.close();
 
-    return vsize / 1024.0;
+    return vsize;
 
 #elif defined(__APPLE__)
     // Inspired by:

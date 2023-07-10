@@ -75,13 +75,13 @@ class basis_set
 
 public:
     [[nodiscard]] constexpr auto is_initalized() const { return initalized; }
-    auto atom_data(uint32_t Z) const -> const auto&
+    auto atom_data(uint32_t atomic_number) const -> const auto&
     {
         if (!initalized)
         {
             throw std::runtime_error("dataset not loaded");
         }
-        return dataset.at(Z);
+        return dataset.at(atomic_number);
     }
 
     static auto load_basis(const std::string& path) { return std::make_shared<basis_set>(basis_set(path)); }

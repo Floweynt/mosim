@@ -5,6 +5,7 @@
 #include "math_util.h"
 #include <array>
 #include <cstdint>
+#include <fmt/core.h>
 #include <fstream>
 #include <glm/glm.hpp>
 #include <iomanip>
@@ -40,31 +41,36 @@ inline static constexpr std::array ELEMENT_COLORS = {0xffffff, 0xd9ffff, 0xcc80f
 class atom
 {
 private:
-    uint32_t Z;
+    uint32_t atomic_number;
     glm::dvec3 r{};
     std::string element;
     std::vector<contracted_gaussian_functions> wavefunctions;
-    uint32_t nrelec;
+    uint32_t electrons;
 
 public:
-    constexpr atom(const std::string& symbolin, double x, double y, double z, const basis_set& basis)
-        : Z(e2z(symbolin)), r(x, y, z), element(symbolin), nrelec(Z)
+    constexpr atom(const std::string& element_name, double x, double y, double z, const basis_set& basis)
+        : atomic_number(e2z(element_name)), r(x, y, z), element(element_name), electrons(atomic_number)
     {
         add_wavefunctions(basis);
     }
 
-    constexpr atom(uint32_t Z, double x, double y, double z, const basis_set& basis) : Z(Z), r(x, y, z), nrelec(Z) { add_wavefunctions(basis); }
+    constexpr atom(uint32_t atomic_number, double x, double y, double z, const basis_set& basis)
+        : atomic_number(atomic_number), r(x, y, z), electrons(atomic_number)
+    {
+        add_wavefunctions(basis);
+    }
 
 private:
     [[nodiscard]] constexpr auto x() const -> double { return r.x; };
     [[nodiscard]] constexpr auto y() const -> double { return r.y; };
     [[nodiscard]] constexpr auto z() const -> double { return r.z; };
+
     static constexpr auto e2z(const std::string& symbol) -> uint32_t
     {
         size_t index = 0;
-        for (const auto* i : ELEMENT_NAMES)
+        for (const auto* name : ELEMENT_NAMES)
         {
-            if (i == symbol)
+            if (name == symbol)
             {
                 return index + 1;
             }
@@ -72,21 +78,22 @@ private:
             index++;
         }
 
-        return 0;
+        throw std::runtime_error("Unknown element: " + symbol);
     }
 
-    static constexpr auto z2e(const uint32_t& z) -> std::string_view
+    static constexpr auto z2e(uint32_t atomic_number) -> std::string_view
     {
-        if (z >= ELEMENT_NAMES.size())
+        atomic_number -= 1;
+        if (atomic_number >= ELEMENT_NAMES.size())
         {
-            return "undefined";
+            throw std::runtime_error(fmt::format("Unknown element: {}", atomic_number));
         }
-        return ELEMENT_NAMES[z];
+        return ELEMENT_NAMES[atomic_number];
     }
 
-    void add_wavefunctions(const basis_set& basis)
+    constexpr void add_wavefunctions(const basis_set& basis)
     {
-        const auto& atom_data = basis.atom_data(Z);
+        const auto& atom_data = basis.atom_data(atomic_number);
 
         for (const auto& orbital : atom_data)
         {
@@ -95,12 +102,12 @@ private:
     }
 
 public:
-    [[nodiscard]] constexpr auto name() const -> std::string_view { return ELEMENT_NAMES[Z - 1]; }
+    [[nodiscard]] constexpr auto name() const -> std::string_view { return z2e(atomic_number); }
     [[nodiscard]] constexpr auto pos() const -> const auto& { return r; }
     [[nodiscard]] constexpr auto orbital_count() const -> uint32_t { return wavefunctions.size(); }
-    constexpr auto operator[](const uint32_t i) const -> const contracted_gaussian_functions& { return wavefunctions[i]; }
-    [[nodiscard]] constexpr auto electron_count() const -> uint32_t { return nrelec; }
-    [[nodiscard]] constexpr auto proton_count() const -> uint32_t { return Z; }
+    constexpr auto operator[](uint32_t index) const -> const contracted_gaussian_functions& { return wavefunctions[index]; }
+    [[nodiscard]] constexpr auto electron_count() const -> uint32_t { return electrons; }
+    [[nodiscard]] constexpr auto proton_count() const -> uint32_t { return atomic_number; }
 };
 
 class molecule
@@ -109,20 +116,20 @@ private:
     std::vector<atom> atoms;
     std::shared_ptr<const basis_set> basis;
     uint32_t charge{};
-
+    std::string basis_name;
 public:
     molecule(const std::shared_ptr<const basis_set>& basis) : basis(basis){};
 
     constexpr void add_atom(const atom& at) { atoms.push_back(at); }
     constexpr void add_atom(const std::string& symbol, double x, double y, double z) { atoms.emplace_back(symbol, x, y, z, *basis); }
-    constexpr void add_atom(const uint32_t Z, double x, double y, double z) { atoms.emplace_back(Z, x, y, z, *basis); }
+    constexpr void add_atom(const uint32_t atomic_number, double x, double y, double z) { atoms.emplace_back(atomic_number, x, y, z, *basis); }
 
     [[nodiscard]] constexpr auto atoms_count() const { return atoms.size(); };
     [[nodiscard]] constexpr auto get_atoms() const -> const auto& { return atoms; }
     [[nodiscard]] constexpr auto get_atoms() -> auto& { return atoms; }
-
-    static auto read_from_file(const std::string& file) -> std::shared_ptr<molecule>;
-
     [[nodiscard]] constexpr auto get_charge() const -> const auto& { return charge; }
+    [[nodiscard]] constexpr auto get_basis_name() const -> const auto& { return basis_name; }
+
+    static auto read_from_file(const nlohmann::json& file) -> std::shared_ptr<molecule>;
 };
 

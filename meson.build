@@ -1,5 +1,5 @@
 project('mosim', 'c', 'cpp', 
-  default_options : ['c_std=c11', 'cpp_std=c++20'], 
+  default_options : ['cpp_std=c++20'], 
   version: '1.0'
 )
 cmake = import('cmake')
@@ -20,7 +20,7 @@ sources = [
   'src/main.cpp',
   'src/hf/hf.cpp',
   'src/hf/basis.cpp',
-  'src/gl/init.cpp',
+  'src/init.cpp',
   'src/gl/orbital_render.cpp',
   'src/gl/render.cpp',
   'src/gl/shader.cpp',
@@ -61,6 +61,9 @@ stacktrace_opts.add_cmake_defines({'USE_STACKTRACE_BACKEND': 'execinfo', 'USE_DE
 stacktrace_subproj = cmake.subproject('stacktrace', options: stacktrace_opts)
 stacktrace_dep = stacktrace_subproj.dependency('stacktrace')
 
+nfd_subproj = cmake.subproject('nativefiledialog-extended')
+nfd_dep = nfd_subproj.dependency('nfd')
+
 conf_data = configuration_data()
 conf_data.set_quoted('VERSION', meson.project_version())
 conf_data.set_quoted('PROJECT_NAME', 'mosim')
@@ -70,7 +73,7 @@ conf_data.set_quoted('MESON_CXX_COMPILER', meson.get_compiler('cpp').get_id())
 configure_file(input: 'build_config.h.in', output: 'build_config.h', configuration : conf_data)
 
 mosim = executable('mosim', sources, 
-  dependencies: [fmt_dep, eigen_dep, glfw_dep, glew_dep, glm_dep, stacktrace_dep, libarchive_dep],
+  dependencies: [fmt_dep, eigen_dep, glfw_dep, glew_dep, glm_dep, stacktrace_dep, libarchive_dep, omp_dep, nfd_dep],
   cpp_pch: 'pch/pch.h', 
   cpp_args : '-DFMT_HEADER_ONLY', 
   link_args: ['-lbfd'],
