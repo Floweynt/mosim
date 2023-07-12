@@ -3,7 +3,6 @@
 #include "gl/shader.h"
 #include "hf/hf.h"
 #include <fmt/ranges.h>
-#include <glm/fwd.hpp>
 
 struct GTO
 {
@@ -82,7 +81,7 @@ void hf_isosurface::isolevel_hf(const hartree_fock_result& result, uint32_t whic
     vao.set_attribute_buffer_bind(1, 0);
 }
 
-void hf_isosurface::draw(gl::render_manager& render, glm::vec3 light_pos)
+void hf_isosurface::render(gl::render_manager& render, glm::vec3 light_pos)
 {
     if (!render.get_shader_manager().has_shader("__hf_isosurface"))
     {

@@ -5,7 +5,6 @@
 #include "util.h"
 #include "vertex_buffer.h"
 #include <cstdint>
-#include <glm/fwd.hpp>
 #include <glm/glm.hpp>
 #include <memory>
 #include <stack>

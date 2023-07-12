@@ -1,6 +1,5 @@
 #include <GL/glew.h>
 //
-#include <GL/gl.h>
 #include <stdexcept>
 //
 #include "gl/font.h"
@@ -21,14 +20,12 @@ namespace gl
             }
         }
 
-        ~gl_text_handle()
-        {
-            gltTerminate();
-        }
+        ~gl_text_handle() { gltTerminate(); }
+
     public:
     };
 
-    void draw_text(const std::string_view& str, glm::vec2 pos, float scale, glm::vec4 color)
+    void render_text(const std::string_view& str, glm::vec2 pos, float scale, glm::vec4 color, int horiz, int vert)
     {
         gl_text_handle::get_instance();
 
@@ -37,7 +34,9 @@ namespace gl
 
         gltBeginDraw();
         gltColor(color.r, color.g, color.b, color.a);
-        gltDrawText2D(text, pos.x, pos.y, scale);
+
+        gltDrawText2DAligned(text, pos.x, pos.y, scale, horiz, vert);
+
         gltEndDraw();
 
         gltDeleteText(text);

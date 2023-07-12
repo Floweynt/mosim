@@ -2,7 +2,6 @@
 #include <GL/glew.h>
 // dont reorder
 #include "gl/window.h"
-#include "nfd.h"
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <GLFW/glfw3.h>

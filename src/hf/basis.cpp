@@ -1,6 +1,5 @@
 #include "hf/basis.h"
 #include "resources.h"
-#include <nlohmann/json_fwd.hpp>
 
 inline static constexpr std::pair<std::string, glm::uvec3> ORBITALS_METADATA_S[] = {
     {"s", {0, 0, 0}},

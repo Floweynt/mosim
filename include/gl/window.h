@@ -1,9 +1,7 @@
-#ifndef __WINDOW_H__
-#define __WINDOW_H__
+#pragma once
 
 #include <GLFW/glfw3.h>
-#include <glm/ext/matrix_float4x4.hpp>
-#include <glm/ext/vector_float4.hpp>
+#include <glm/glm.hpp>
 #include <iostream>
 #include <stdexcept>
 
@@ -38,4 +36,3 @@ namespace gl
     };
 } // namespace gl
 
-#endif

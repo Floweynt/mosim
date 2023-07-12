@@ -1,11 +1,7 @@
-#ifndef __MATRIX_H__
-#define __MATRIX_H__
-#include <glm/ext/matrix_transform.hpp>
-#include <glm/ext/quaternion_transform.hpp>
-#include <glm/fwd.hpp>
+#pragma once
+#include <glm/ext.hpp>
+#include <glm/glm.hpp>
 #include <glm/gtx/quaternion.hpp>
-#include <glm/mat4x4.hpp>
-#include <glm/vec3.hpp>
 #include <vector>
 
 namespace gl
@@ -17,7 +13,7 @@ namespace gl
         mat4 current;
 
     public:
-        constexpr matrix_stack() : st(), current(glm::identity<mat4>()) {}
+        constexpr matrix_stack() : current(glm::identity<mat4>()) {}
 
         // pushes the current matrix, then multiples by mat
         constexpr void push(const mat4& mat)
@@ -26,7 +22,7 @@ namespace gl
             current = current * mat;
         }
 
-        constexpr auto& push()
+        constexpr auto push() -> auto&
         {
             st.push_back(current);
             return *this;
@@ -73,4 +69,3 @@ namespace gl
     };
 } // namespace gl
 
-#endif

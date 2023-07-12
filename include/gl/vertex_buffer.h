@@ -1,16 +1,12 @@
-#ifndef __VERTEX_BUFFER_H__
-#define __VERTEX_BUFFER_H__
+#pragma once
 
 #include "glstate.h"
 #include "matrix.h"
 #include "shader.h"
-#include <GL/gl.h>
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
-#include <glm/gtx/string_cast.hpp>
-#include <glm/matrix.hpp>
-#include <glm/vec3.hpp>
+#include <glm/glm.hpp>
 #include <iostream>
 #include <stdexcept>
 #include <vector>
@@ -21,9 +17,9 @@ namespace gl
 
     struct vertex_buffer_cfg
     {
-        bool enable_normal;
-        bool enable_uv;
-        bool enable_color;
+        bool enable_normal{};
+        bool enable_uv{};
+        bool enable_color{};
         GLenum primitive = GL_TRIANGLES;
     };
 
@@ -83,6 +79,14 @@ namespace gl
         class builder;
 
         [[nodiscard]] constexpr auto baked() const -> bool { return is_baked; }
+        
+        constexpr void reset()
+        {
+            is_baked = false;
+            buffer.clear();
+        }
+
+        constexpr auto vert_count() const { return buffer.size(); }
 
         void bake()
         {
@@ -127,6 +131,11 @@ namespace gl
             buffer.emplace_back(vtx);
             return *this;
         }
+
+        constexpr auto get_vbo() const -> const auto& { return vbo; }
+        constexpr auto get_vbo() -> auto& { return vbo; }
+        constexpr auto get_vao() const -> const auto& { return vao; }
+        constexpr auto get_vao() -> auto& { return vao; }
     };
 
     template <vertex_buffer_cfg C>
@@ -199,4 +208,3 @@ namespace gl
     }>;
 } // namespace gl
 
-#endif

@@ -3,7 +3,7 @@
 #include "hf/chem.h"
 #include "hf/gamma.h"
 #include <fmt/core.h>
-#include <glm/gtx/norm.hpp>
+#include <glm/ext.hpp>
 #include <iostream>
 #include <ranges>
 

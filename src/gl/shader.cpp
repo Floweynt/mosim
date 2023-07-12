@@ -237,7 +237,7 @@ auto gl::basic_shader::validate_uniform_set(const std::string& name) -> int
     expect(get_id() != 0, "current shader must be valid");
     int loc = glGetUniformLocation(get_id(), name.c_str());
     gl::gl_check();
-    // expect(loc != -1, fmt::format("invalid name for uniform {}", name));
+    expect(loc != -1, fmt::format("invalid name for uniform {}", name));
     return loc;
 }
 

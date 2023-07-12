@@ -10,7 +10,7 @@ class hf_isosurface
     size_t vert_count;
 
 public:
-    void draw(gl::render_manager& render, glm::vec3 light_pos);
+    void render(gl::render_manager& render, glm::vec3 light_pos);
     void isolevel_hf(const hartree_fock_result& result, uint32_t which_mo, glm::vec3 start, glm::vec3 end, size_t detail, float isolevel);
 };
 

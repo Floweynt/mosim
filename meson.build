@@ -15,6 +15,7 @@ glm_dep = dependency('glm')
 glew_dep = dependency('glew')
 omp_dep = dependency('openmp')
 libarchive_dep = dependency('libarchive')
+nlohmann_dep = dependency('nlohmann_json', required: true)
 
 sources = [
   'src/main.cpp',
@@ -24,10 +25,16 @@ sources = [
   'src/gl/orbital_render.cpp',
   'src/gl/render.cpp',
   'src/gl/shader.cpp',
+  'src/gl/2dui.cpp',
   'src/gl/window.cpp',
   'src/resources.cpp',
   'src/hf/chem.cpp',
-  'src/gl/font.cpp'
+  'src/ui/electron_cloud_manager.cpp',
+  'src/ui/molorb_display.cpp',
+  'src/gl/event.cpp',
+  'src/gl/font.cpp',
+  'src/ui/config_ui.cpp',
+  'src/keybind.cpp'
 ]
 
 include_dirs = [
@@ -73,7 +80,7 @@ conf_data.set_quoted('MESON_CXX_COMPILER', meson.get_compiler('cpp').get_id())
 configure_file(input: 'build_config.h.in', output: 'build_config.h', configuration : conf_data)
 
 mosim = executable('mosim', sources, 
-  dependencies: [fmt_dep, eigen_dep, glfw_dep, glew_dep, glm_dep, stacktrace_dep, libarchive_dep, omp_dep, nfd_dep],
+  dependencies: [fmt_dep, eigen_dep, glfw_dep, glew_dep, glm_dep, stacktrace_dep, libarchive_dep, omp_dep, nfd_dep, nlohmann_dep],
   cpp_pch: 'pch/pch.h', 
   cpp_args : '-DFMT_HEADER_ONLY', 
   link_args: ['-lbfd'],

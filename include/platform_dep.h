@@ -1,6 +1,9 @@
+#pragma once
 #ifdef __linux__
 #include <cstdio>
 #include <fstream>
+#include <pwd.h>
+#include <sys/types.h>
 #include <unistd.h>
 #endif
 
@@ -18,7 +21,7 @@
 /// The amount of memory currently being used by this process, in bytes.
 /// By default, returns the full virtual arena, but if resident=true,
 /// it will report just the resident set in RAM (if supported on that OS).
-size_t memory_used(bool resident = false)
+inline auto memory_used(bool resident = false) -> size_t
 {
 #if defined(__linux__)
     // Ugh, getrusage doesn't work well on Linux.  Try grabbing info
@@ -34,8 +37,8 @@ size_t memory_used(bool resident = false)
     // dummy vars for leading entries in stat that we don't care about
     std::string discard;
     unsigned long vsize = 0;
-    stat_stream >> discard >> discard >> discard >> discard >> discard >> discard >> discard >> discard >> discard >> discard >> discard >> discard >> discard >> discard >>
-        discard >> discard >> discard >> discard >> discard >> discard >> discard >> discard >> vsize;
+    stat_stream >> discard >> discard >> discard >> discard >> discard >> discard >> discard >> discard >> discard >> discard >> discard >> discard >>
+        discard >> discard >> discard >> discard >> discard >> discard >> discard >> discard >> discard >> discard >> vsize;
     stat_stream.close();
 
     return vsize;
@@ -62,3 +65,17 @@ size_t memory_used(bool resident = false)
     return 0; // Punt
 #endif
 }
+
+inline auto get_home() -> std::string
+{
+#if defined(__linux__)
+    const char* homedir = nullptr;
+
+    if ((homedir = getenv("HOME")) == nullptr)
+    {
+        homedir = getpwuid(getuid())->pw_dir;
+    }
+    return homedir;
+#endif
+}
+
