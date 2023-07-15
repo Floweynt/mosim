@@ -543,7 +543,7 @@ public:
             oldenergy = energy;
             energies.push_back(energy);
 
-            if (iter > 100)
+            if (iter > 1000)
             {
                 std::cout << "Too may iteration steps.. terminating and outputting results." << std::endl;
                 break;

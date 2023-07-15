@@ -13,6 +13,7 @@
 #include "keybind.h"
 #include "nfd.h"
 #include "platform_dep.h"
+#include "solve_in_thread.h"
 #include "ui/config_ui.h"
 #include "ui/electron_cloud_manager.h"
 #include "ui/molorb_display.h"
@@ -151,7 +152,9 @@ protected:
     }
 
 public:
-    mol_orbital(int width, int height, const char* name, hartree_fock_result result) : gl::window(width, height, name), molorb_ui(std::move(result))
+    mol_orbital(int width, int height, const char* name,
+                std::variant<hartree_fock_result, std::future<hartree_fock_result>, std::monostate> init_state)
+        : gl::window(width, height, name), molorb_ui(std::move(init_state))
     {
     }
 };
@@ -161,16 +164,6 @@ auto main(int argc, const char* argv[]) -> int
     std::span<const char*> args(argv, argc);
     try
     {
-        std::string filename;
-        if (argc != 2)
-        {
-            std::cerr << "usage: " << args[0] << " [filename]\n";
-            exit(-1);
-        }
-
-        filename = args[1];
-
-        // do config
         std::filesystem::create_directories(get_home() + "/.mo_config/");
         keybind_config::get_instance().load(get_home() + "/.mo_config/keybind.json");
 
@@ -180,31 +173,21 @@ auto main(int argc, const char* argv[]) -> int
         basis_manager::get_instance().register_basis("sto-5g");
         basis_manager::get_instance().register_basis("sto-6g");
 
-        std::ifstream ifs(filename);
-        if (!ifs)
+        if (argc == 1)
         {
-            std::cerr << "failed to open file: " << filename << '\n';
-            exit(-1);
+            mol_orbital window(1000, 1000, "Molecular Orbitals", std::monostate{});
+            window.run();
         }
-
-        auto json = nlohmann::json::parse(ifs);
-        hartree_fock_result result;
-
-        if (json.value("type", "") == "mo_output")
+        else if (argc == 2)
         {
-            read_result(result, json);
+            mol_orbital window(1000, 1000, "Molecular Orbitals", run_hf(args[1]));
+            window.run();
         }
         else
         {
-            auto mol = molecule::read_from_file(json);
-            std::cout << "solving\n";
-            result = solve(mol);
+            std::cerr << "usage: " << args[0] << " [filename]\n";
+            exit(-1);
         }
-
-        mol_orbital window(1000, 1000, "Molecular Orbitals", std::move(result));
-
-        window.run();
-        return 0;
     }
     catch (gl::shader_error& err)
     {

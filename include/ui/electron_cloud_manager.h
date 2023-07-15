@@ -26,7 +26,7 @@ public:
         }
     }
 
-    void set_result(const hartree_fock_result& result);
+    void set_result(const hartree_fock_result* result);
     void render(gl::render_manager& render);
     constexpr void regenerate() { dirty_status = std::vector<bool>(effective_buffer_size, true); }
 };
