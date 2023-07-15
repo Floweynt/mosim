@@ -13,6 +13,8 @@ struct hartree_fock_result
     size_t electron_count;
     size_t homo_index;
     std::string basis_name;
+    size_t solve_time_microseconds;
+    std::vector<std::string> orbital_names;
 };
 
 auto solve(const std::shared_ptr<molecule>& molecule) -> hartree_fock_result;

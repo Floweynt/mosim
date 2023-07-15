@@ -430,6 +430,36 @@ void molorb_display::scrollwheel(double delta_x, double delta_y) { zoom = std::c
     return electron_desc;
 }
 
+[[nodiscard]] auto molorb_display::get_weight_desc() const -> std::string
+{
+    if (!std::holds_alternative<hartree_fock_result>(this->result))
+    {
+        return "";
+    }
+
+    const auto& result = std::get<hartree_fock_result>(this->result);
+    std::vector<std::pair<double, std::string>> ao_info;
+    for (size_t i = 0; i < result.coefficients.rows(); i++)
+    {
+        ao_info.emplace_back(result.coefficients(i, electron_cloud.get_index()), result.orbital_names[i]);
+    }
+
+    std::sort(ao_info.begin(), ao_info.end(),
+              [](const std::pair<double, std::string>& lhs, const std::pair<double, std::string>& rhs) { return abs(lhs.first) > abs(rhs.first); });
+
+    std::string out;
+    for (auto& i : ao_info)
+    {
+        if (abs(i.first) < 0.01)
+        {
+            break;
+        }
+        out += fmt::format("  {}: {:.4f}\n", i.second, i.first);
+    }
+
+    return out;
+}
+
 void molorb_display::render(gl::render_manager& renderer)
 {
     if (std::holds_alternative<std::future<hartree_fock_result>>(this->result))
@@ -472,12 +502,16 @@ void molorb_display::render(gl::render_manager& renderer)
         gl::render_text(fmt::format("Info:\n"
                                     "  Iterations: {}\n"
                                     "  Electrons: {}\n"
+                                    "  Solve time: {}us\n"
                                     "MO Info:\n"
                                     "  MO #{}\n"
-                                    "  E: {:.4f} eV\n"
-                                    "  {}",
-                                    result.iterations, result.electron_count, electron_cloud.get_index() + 1,
-                                    result.mo_energies[electron_cloud.get_index()] * EV_PER_HT, get_electron_desc()),
+                                    "  E: {:.4f} eV ({:.4f} HT)\n"
+                                    "  {}\n"
+                                    "AO Weights:\n"
+                                    "{}\n",
+                                    result.iterations, result.electron_count, result.solve_time_microseconds, electron_cloud.get_index() + 1,
+                                    result.mo_energies[electron_cloud.get_index()] * EV_PER_HT, result.mo_energies[electron_cloud.get_index()],
+                                    get_electron_desc(), get_weight_desc()),
                         {3, 3});
     }
     mo_display_buttons->render(renderer);

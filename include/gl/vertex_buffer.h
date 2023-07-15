@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
+#include <glm/fwd.hpp>
 #include <glm/glm.hpp>
 #include <iostream>
 #include <stdexcept>
@@ -23,44 +24,79 @@ namespace gl
         GLenum primitive = GL_TRIANGLES;
     };
 
-    template <vertex_buffer_cfg C>
-    class vertex_buffer
+    namespace detail
     {
-        struct vertex_with_normal
-        {
-            vec3 norm;
-        };
-
-        struct vertex_with_uv
-        {
-            vec2 uv;
-        };
-
-        struct vertex_with_color
-        {
-            std::uint32_t color;
-        };
-
-        struct empty0
+        template <bool normal, bool uv, bool color>
+        struct vertex_impl
         {
         };
 
-        struct empty1
-        {
-        };
-
-        struct empty2
-        {
-        };
-
-    public:
-        struct vertex : std::conditional_t<C.enable_normal, vertex_with_normal, empty0>,
-                        std::conditional_t<C.enable_uv, vertex_with_uv, empty1>,
-                        std::conditional_t<C.enable_color, vertex_with_color, empty2>
+        template<>
+        struct vertex_impl<false, false, false>
         {
             vec3 pos;
         };
 
+        template<>
+        struct vertex_impl<false, false, true>
+        {
+            uint32_t color;
+            vec3 pos;
+        };
+
+        template<>
+        struct vertex_impl<false, true, false>
+        {
+            vec3 pos;
+            vec2 uv;
+        };
+
+        template<>
+        struct vertex_impl<false, true, true>
+        {
+            uint32_t color;
+            vec3 pos;
+            vec2 uv;
+        };
+
+        template<>
+        struct vertex_impl<true, false, false>
+        {
+            vec3 pos;
+            vec3 norm;
+        };
+
+        template<>
+        struct vertex_impl<true, false, true>
+        {
+            uint32_t color;
+            vec3 pos;
+            vec3 norm;
+        };
+
+        template<>
+        struct vertex_impl<true, true, false>
+        {
+            vec3 norm;
+            vec3 pos;
+            vec2 uv;
+        };
+
+        template<>
+        struct vertex_impl<true, true, true>
+        {
+            vec3 norm;
+            uint32_t color;
+            vec3 pos;
+            vec2 uv;
+        };
+    } // namespace detail
+
+    template <vertex_buffer_cfg C>
+    class vertex_buffer
+    {
+    public:
+        using vertex = detail::vertex_impl<C.enable_normal, C.enable_uv, C.enable_color>;
         static_assert(sizeof(vertex) == sizeof(vec3) + (C.enable_normal ? sizeof(vec3) : 0) + (C.enable_uv ? sizeof(vec2) : 0) +
                                             (C.enable_color ? sizeof(std::uint32_t) : 0));
 
@@ -79,7 +115,7 @@ namespace gl
         class builder;
 
         [[nodiscard]] constexpr auto baked() const -> bool { return is_baked; }
-        
+
         constexpr void reset()
         {
             is_baked = false;

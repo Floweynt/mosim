@@ -150,27 +150,7 @@ inline
     return {(alpha1 * a.x + alpha2 * b.x) / gamma, (alpha1 * a.y + alpha2 * b.y) / gamma, (alpha1 * a.z + alpha2 * b.z) / gamma};
 }
 
-#if __cplusplus > 202002L
-constexpr
-#else
-inline
-#endif
-
-    auto
-    binomial_prefactor(int64_t s, int64_t ia, int64_t ib, double xpa, double xpb) -> double
-{
-    double sum = 0.;
-    for (int t = 0; t < s + 1; t++)
-    {
-        if ((s - ia <= t) && (t <= ib))
-        {
-            sum += binomial(ia, s - t) * binomial(ib, t) * std::pow(xpa, ia - s + t) * std::pow(xpb, ib - t);
-        }
-    }
-    return sum;
-}
-
-template <typename T>
+    template <typename T>
     requires(std::is_integral_v<T>)
 #if __cplusplus > 202002L
 constexpr
@@ -204,3 +184,25 @@ inline
 
     return result;
 }
+
+#if __cplusplus > 202002L
+constexpr
+#else
+inline
+#endif
+
+    auto
+    binomial_prefactor(int64_t s, int64_t ia, int64_t ib, double xpa, double xpb) -> double
+{
+    double sum = 0.;
+    for (int64_t t = 0; t < s + 1; t++)
+    {
+        if ((s - ia <= t) && (t <= ib))
+        {
+            sum += binomial(ia, s - t) * binomial(ib, t) * pow_i(xpa, ia - s + t) * pow_i(xpb, ib - t);
+        }
+    }
+    return sum;
+}
+
+

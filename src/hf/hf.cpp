@@ -4,6 +4,7 @@
 #include "hf/gamma.h"
 #include <fmt/core.h>
 #include <glm/ext.hpp>
+#include <glm/gtx/norm.hpp>
 #include <iostream>
 #include <ranges>
 
@@ -341,7 +342,6 @@ public:
     uint32_t atom_count{};
     uint32_t electron_count{};
     uint32_t step_count{};
-    std::vector<std::string> orbital_desc_list;
     std::vector<contracted_gaussian_functions> orbitals;
     H_matrix H;
     S_matrix S;
@@ -378,7 +378,6 @@ public:
             for (uint32_t j = 0; j < mol->get_atoms()[i].orbital_count(); j++)
             {
                 count++;
-                orbital_desc_list.push_back(fmt::format("[{}] {}{}\t ({})", count, mol->get_atoms()[i].name(), i + 1, mol->get_atoms()[i][j].type()));
                 orbitals.push_back(mol->get_atoms()[i][j]);
             }
         }
@@ -404,9 +403,23 @@ public:
 
     auto run() -> hartree_fock_result
     {
+        auto start = std::chrono::high_resolution_clock::now();
         setup();
         uint32_t iter = iterate();
+        auto stop = std::chrono::high_resolution_clock::now();
+        auto duration = duration_cast<std::chrono::microseconds>(stop - start);
+
         auto atoms = mol->get_atoms() | std::views::transform([](const atom& ato) { return std::make_pair(ato.proton_count(), ato.pos()); });
+        std::vector<std::string> ao_names;
+
+        for (uint32_t i = 0; i < mol->atoms_count(); i++)
+        {
+            for (uint32_t j = 0; j < mol->get_atoms()[i].orbital_count(); j++)
+            {
+                ao_names.emplace_back(fmt::format("{}{}-{}", mol->get_atoms()[i].name(), i, mol->get_atoms()[i][j].type()));
+            }
+        }
+
         return {.iterations = iter,
                 .mo_energies = std::move(molorb_energy),
                 .coefficients = std::move(C),
@@ -414,7 +427,9 @@ public:
                 .atoms = std::vector<std::pair<uint32_t, glm::dvec3>>(atoms.begin(), atoms.end()),
                 .electron_count = electron_count,
                 .homo_index = (electron_count + 1) / 2 - 1,
-                .basis_name = mol->get_basis_name()};
+                .basis_name = mol->get_basis_name(),
+                .solve_time_microseconds = (size_t)duration.count(),
+                .orbital_names = ao_names};
     }
 
     void step()
@@ -622,6 +637,7 @@ void write_result(const hartree_fock_result& result, nlohmann::json& out_json)
                 {"electron_count", result.electron_count},
                 {"homo_index", result.homo_index},
                 {"basis_name", result.basis_name},
+                {"orbital_names", result.orbital_names},
                 {"type", "mo_output"}};
 }
 
@@ -634,6 +650,7 @@ void read_result(hartree_fock_result& result, const nlohmann::json& in_json)
     result.electron_count = in_json.at("electron_count");
     result.homo_index = in_json.at("homo_index");
     result.basis_name = in_json.at("basis_name");
+    result.orbital_names = in_json.at("orbital_names");
 
     size_t mat_rows = in_json.at("coefficient_n");
 

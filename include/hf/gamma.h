@@ -7,9 +7,9 @@
 
 namespace detail
 {
-    constexpr auto gcf(const double a, const double x) -> double
+    constexpr auto gcf(double a, double x) -> double
     {
-        double FP_MIN = std::numeric_limits<double>::min() / std::numeric_limits<double>::epsilon();
+        constexpr double FP_MIN = std::numeric_limits<double>::min() / std::numeric_limits<double>::epsilon();
         double gln = std::lgamma(a);
 
         double b = x + 1.0 - a;
@@ -33,7 +33,8 @@ namespace detail
             d = 1.0 / d;
             double del = d * c;
             h *= del;
-            if (std::fabs(del - 1.0) <= std::numeric_limits<double>::epsilon())
+                                                                                   // :P
+            if (std::fabs(del - 1.0) <= /*std::numeric_limits<double>::epsilon()*/ 0.00001)
             {
                 break;
             }
@@ -78,7 +79,7 @@ namespace detail
         return (psig ? (ans > 0.0 ? 1.0 - ans : -ans) : (ans >= 0.0 ? ans : 1.0 + ans));
     }
 
-    constexpr auto gser(const double a, const double x) -> double
+    constexpr auto gser(double a, double x) -> double
     {
         double sum = 0;
         double gln = std::lgamma(a);
@@ -96,7 +97,7 @@ namespace detail
         }
     }
 
-    constexpr auto gammp(const double a, double x) -> double
+    constexpr auto gammp(double a, double x) -> double
     {
         constexpr int ASWITCH = 100;
         if (x < 0.0 || a <= 0.0)
@@ -120,18 +121,16 @@ namespace detail
         return 1.0 - gcf(a, x);
     }
 
-    constexpr auto gamm_inc(const double a, const double x) -> double
+    constexpr auto gamm_inc(double a, double x) -> double
     {
         double gammap = gammp(a, x);
-        double gln = std::lgamma(a);
-        return exp(gln) * gammap;
+        return std::tgamma(a) * gammap;
     }
 } // namespace detail
 
-constexpr auto Fgamma(const double m, double x) -> double
+constexpr auto Fgamma(int64_t m, double x) -> double
 {
-    double tiny = 0.00000001;
+    constexpr double tiny = 0.00000001;
     x = std::max(std::abs(x), tiny);
-    double val = detail::gamm_inc(m + 0.5, x);
-    return 0.5 * pow(x, -m - 0.5) * val;
+    return 0.5 * pow(x, -m - 0.5) * detail::gamm_inc(m + 0.5, x);
 }

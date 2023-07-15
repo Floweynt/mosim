@@ -37,6 +37,22 @@ sources = [
   'src/keybind.cpp'
 ]
 
+assets = [
+  'assets/shaders/fragment.glsl',
+  'assets/shaders/orbital_fragment.glsl',
+  'assets/shaders/orbital_vertex.glsl',
+  'assets/shaders/orbital_geom.glsl',
+  'assets/shaders/render_cloud_compute.glsl',
+  'assets/shaders/2d_vertex.glsl',
+  'assets/shaders/2d_fragment.glsl',
+  'assets/shaders/vertex.glsl',
+  'assets/basis/sto-6g.json',
+  'assets/basis/sto-3g.json',
+  'assets/basis/sto-2g.json',
+  'assets/basis/sto-4g.json',
+  'assets/basis/sto-5g.json'
+]
+
 include_dirs = [
   'include',
   '.'
@@ -49,18 +65,14 @@ asset_dir = meson.source_root()/'assets'
 
 assets_compressed = custom_target('assets-compressed',
   output: 'assets.tar',
-  input: [ ],
-  command : [tar, '-cvf', '@OUTPUT@', '-C', meson.source_root(), 'assets'],
-  build_always: true,
-  build_by_default: true
+  input: assets,
+  command : [tar, '-cvf', '@OUTPUT@', '-C', meson.source_root(), 'assets']
 )
 
 assets_header = custom_target('assets-header',
   output: 'assets.h',
   input: assets_compressed,
   command : [xxd, '-i', '@INPUT@', '@OUTPUT@'],
-  build_always: true,
-  build_by_default: true
 )
 
 stacktrace_opts = cmake.subproject_options()
@@ -80,7 +92,7 @@ conf_data.set_quoted('MESON_CXX_COMPILER', meson.get_compiler('cpp').get_id())
 configure_file(input: 'build_config.h.in', output: 'build_config.h', configuration : conf_data)
 
 mosim = executable('mosim', sources, 
-  dependencies: [fmt_dep, eigen_dep, glfw_dep, glew_dep, glm_dep, stacktrace_dep, libarchive_dep, omp_dep, nfd_dep, nlohmann_dep],
+  dependencies: [fmt_dep, eigen_dep, glfw_dep, glew_dep, glm_dep, stacktrace_dep, libarchive_dep, nfd_dep, nlohmann_dep, omp_dep],
   cpp_pch: 'pch/pch.h', 
   cpp_args : '-DFMT_HEADER_ONLY', 
   link_args: ['-lbfd'],

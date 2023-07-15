@@ -471,7 +471,7 @@ void ui_label::update(glm::uvec2 win_size)
 }
 
 ui_label::ui_label(std::string name, std::string text, glm::vec3 bg_color, glm::vec3 text_color, glm::vec2 text_offset, float text_scale)
-    : ui_widget("label", name), text(std::move(text)), bg_color(bg_color), text_color(text_color), text_offset(text_offset), text_scale(text_scale)
+    : ui_widget("label", name), text(std::move(text)), text_offset(text_offset), bg_color(bg_color), text_color(text_color), text_scale(text_scale)
 {
 }
 

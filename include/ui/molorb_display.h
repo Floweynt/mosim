@@ -46,10 +46,11 @@ class molorb_display : public gl::compound_event_handler
     void save();
     void load();
     void reload();
+    [[nodiscard]] auto get_electron_desc() const -> std::string;
+    [[nodiscard]] auto get_weight_desc() const -> std::string;
 public:
     molorb_display(std::variant<hartree_fock_result, std::future<hartree_fock_result>, std::monostate> init_state);
     void init();
     void scrollwheel(double delta_x, double delta_y);
-    [[nodiscard]] auto get_electron_desc() const -> std::string;
     void render(gl::render_manager& renderer);
 };
