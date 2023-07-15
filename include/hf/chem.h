@@ -48,13 +48,13 @@ private:
     uint32_t electrons;
 
 public:
-    constexpr atom(const std::string& element_name, double x, double y, double z, const basis_set& basis)
+    atom(const std::string& element_name, double x, double y, double z, const basis_set& basis)
         : atomic_number(e2z(element_name)), r(x, y, z), element(element_name), electrons(atomic_number)
     {
         add_wavefunctions(basis);
     }
 
-    constexpr atom(uint32_t atomic_number, double x, double y, double z, const basis_set& basis)
+     atom(uint32_t atomic_number, double x, double y, double z, const basis_set& basis)
         : atomic_number(atomic_number), r(x, y, z), electrons(atomic_number)
     {
         add_wavefunctions(basis);
@@ -91,7 +91,7 @@ private:
         return ELEMENT_NAMES[atomic_number];
     }
 
-    constexpr void add_wavefunctions(const basis_set& basis)
+    void add_wavefunctions(const basis_set& basis)
     {
         const auto& atom_data = basis.atom_data(atomic_number);
 
@@ -117,12 +117,13 @@ private:
     std::shared_ptr<const basis_set> basis;
     uint32_t charge{};
     std::string basis_name;
+
 public:
     molecule(const std::shared_ptr<const basis_set>& basis) : basis(basis){};
 
-    constexpr void add_atom(const atom& at) { atoms.push_back(at); }
-    constexpr void add_atom(const std::string& symbol, double x, double y, double z) { atoms.emplace_back(symbol, x, y, z, *basis); }
-    constexpr void add_atom(const uint32_t atomic_number, double x, double y, double z) { atoms.emplace_back(atomic_number, x, y, z, *basis); }
+    void add_atom(const atom& at) { atoms.push_back(at); }
+    void add_atom(const std::string& symbol, double x, double y, double z) { atoms.emplace_back(symbol, x, y, z, *basis); }
+    void add_atom(const uint32_t atomic_number, double x, double y, double z) { atoms.emplace_back(atomic_number, x, y, z, *basis); }
 
     [[nodiscard]] constexpr auto atoms_count() const { return atoms.size(); };
     [[nodiscard]] constexpr auto get_atoms() const -> const auto& { return atoms; }

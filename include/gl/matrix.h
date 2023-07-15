@@ -16,7 +16,7 @@ namespace gl
         constexpr matrix_stack() : current(glm::identity<mat4>()) {}
 
         // pushes the current matrix, then multiples by mat
-        constexpr void push(const mat4& mat)
+         void push(const mat4& mat)
         {
             st.push_back(current);
             current = current * mat;
@@ -34,38 +34,38 @@ namespace gl
             st.pop_back();
         }
 
-        constexpr void mult(const mat4& mat) { current *= mat; }
+         void mult(const mat4& mat) { current *= mat; }
 
         [[nodiscard]] constexpr auto curr() const -> const auto& { return current; }
 
-        constexpr auto rotate(float theta, const vec3& axis) -> auto&
+         auto rotate(float theta, const vec3& axis) -> auto&
         {
             current *= glm::rotate(current, theta, axis);
             return *this;
         }
 
-        constexpr auto rotate(const glm::quat& quat) -> auto&
+         auto rotate(const glm::quat& quat) -> auto&
         {
             current *= glm::toMat4(quat);
             return *this;
         }
 
-        constexpr auto translate(const vec3& offset) -> auto&
+         auto translate(const vec3& offset) -> auto&
         {
             current *= glm::translate(current, offset);
             return *this;
         }
 
-        constexpr auto scale(const vec3& val) -> auto&
+         auto scale(const vec3& val) -> auto&
         {
             current *= glm::scale(current, val);
             return *this;
         }
 
-        constexpr auto rotate(float theta, float x, float y, float z) -> auto& { return rotate(theta, {x, y, z}); }
-        constexpr auto translate(float x, float y, float z) -> auto& { return translate({x, y, z}); }
-        constexpr auto scale(float x, float y, float z) -> auto& { return scale({x, y, z}); }
-        constexpr auto scale(float amount) -> auto& { return scale(amount, amount, amount); }
+         auto rotate(float theta, float x, float y, float z) -> auto& { return rotate(theta, {x, y, z}); }
+         auto translate(float x, float y, float z) -> auto& { return translate({x, y, z}); }
+         auto scale(float x, float y, float z) -> auto& { return scale({x, y, z}); }
+         auto scale(float amount) -> auto& { return scale(amount, amount, amount); }
     };
 } // namespace gl
 

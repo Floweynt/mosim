@@ -99,5 +99,5 @@ class basis_manager : public singleton<basis_manager>
 
 public:
     void register_basis(const std::string& name) { basis_list[name] = basis_set::load_basis_builtin("assets/basis/" + name + ".json"); }
-    constexpr auto get_basis(const std::string& name) const -> const auto& { return basis_list.at(name); }
+    inline auto get_basis(const std::string& name) const -> const auto& { return basis_list.at(name); }
 };

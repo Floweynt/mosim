@@ -3,7 +3,13 @@
 #include <glm/glm.hpp>
 #include <type_traits>
 
-constexpr auto fact(int64_t val) -> int64_t
+#if __cplusplus > 202002L
+constexpr
+#else
+inline
+#endif
+    auto
+    fact(int64_t val) -> int64_t
 {
     constexpr int64_t TABLE[11] = {1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880, 3628880};
     if (val < 2)
@@ -15,6 +21,7 @@ constexpr auto fact(int64_t val) -> int64_t
         return TABLE[val];
     }
 
+#if __cplusplus > 202002L
     if consteval
     {
         int64_t res = 1;
@@ -25,6 +32,7 @@ constexpr auto fact(int64_t val) -> int64_t
 
         return res * TABLE[val];
     }
+#endif
 
     static std::array<int64_t, 64> cache{};
 
@@ -47,7 +55,13 @@ constexpr auto fact(int64_t val) -> int64_t
     return res * TABLE[val];
 }
 
-constexpr auto fact2(int64_t val) -> int64_t
+#if __cplusplus > 202002L
+constexpr
+#else
+inline
+#endif
+    auto
+    fact2(int64_t val) -> int64_t
 {
     constexpr int64_t TABLE[11] = {1, 1, 2, 3, 8, 15, 48, 105, 384, 945, 3840};
     if (val < 2)
@@ -59,6 +73,7 @@ constexpr auto fact2(int64_t val) -> int64_t
         return TABLE[val];
     }
 
+#if __cplusplus > 202002L
     if consteval
     {
         int64_t res = 1;
@@ -69,6 +84,7 @@ constexpr auto fact2(int64_t val) -> int64_t
         }
         return res;
     }
+#endif
 
     static std::array<int64_t, 64> cache{};
 
@@ -91,12 +107,21 @@ constexpr auto fact2(int64_t val) -> int64_t
     return res * TABLE[val];
 }
 
-constexpr auto binomial(int64_t a, int64_t b) -> int64_t
+#if __cplusplus > 202002L
+constexpr
+#else
+inline
+#endif
+
+    auto
+    binomial(int64_t a, int64_t b) -> int64_t
 {
+#if __cplusplus > 202002L
     if consteval
     {
         return fact(a) / (fact(b) * fact(a - b));
     }
+#endif
 
     static constexpr size_t CACHE_SIZE = 64;
     static std::array<int64_t, CACHE_SIZE * CACHE_SIZE> cache{};
@@ -112,13 +137,27 @@ constexpr auto binomial(int64_t a, int64_t b) -> int64_t
     return fact(a) / (fact(b) * fact(a - b));
 }
 
-constexpr auto gaussian_product_center(const double& alpha1, const glm::dvec3& a, const double& alpha2, const glm::dvec3& b) -> glm::dvec3
+#if __cplusplus > 202002L
+constexpr
+#else
+inline
+#endif
+
+    auto
+    gaussian_product_center(const double& alpha1, const glm::dvec3& a, const double& alpha2, const glm::dvec3& b) -> glm::dvec3
 {
     double gamma = alpha1 + alpha2;
     return {(alpha1 * a.x + alpha2 * b.x) / gamma, (alpha1 * a.y + alpha2 * b.y) / gamma, (alpha1 * a.z + alpha2 * b.z) / gamma};
 }
 
-constexpr auto binomial_prefactor(int64_t s, int64_t ia, int64_t ib, double xpa, double xpb) -> double
+#if __cplusplus > 202002L
+constexpr
+#else
+inline
+#endif
+
+    auto
+    binomial_prefactor(int64_t s, int64_t ia, int64_t ib, double xpa, double xpb) -> double
 {
     double sum = 0.;
     for (int t = 0; t < s + 1; t++)
@@ -131,14 +170,21 @@ constexpr auto binomial_prefactor(int64_t s, int64_t ia, int64_t ib, double xpa,
     return sum;
 }
 
-template<typename T> requires(std::is_integral_v<T>)
-constexpr auto pow_i(double base, T exp)
+template <typename T>
+    requires(std::is_integral_v<T>)
+#if __cplusplus > 202002L
+constexpr
+#else
+inline
+#endif
+    auto
+    pow_i(double base, T exp)
 {
     double result = 1;
 
-    if(exp < 0)
+    if (exp < 0)
     {
-        base = 1/base;
+        base = 1 / base;
         exp = -exp;
     }
 

@@ -49,24 +49,24 @@ namespace
         return eigenvectors * (D * eigenvectors.transpose());
     }
 
-    constexpr auto fact_ratio2(int64_t a, int64_t b) -> double { return fact(a) / fact(b) / fact(a - 2 * b); }
+    auto fact_ratio2(int64_t a, int64_t b) -> double { return fact(a) / fact(b) / fact(a - 2 * b); }
 
-    constexpr auto b0(int i, int r, double g) -> double { return fact_ratio2(i, r) * pow_i(4 * g, r - i); }
+    auto b0(int i, int r, double g) -> double { return fact_ratio2(i, r) * pow_i(4 * g, r - i); }
 
-    constexpr auto force_b(int64_t i, int64_t l1, int64_t l2, double p, double a, double b, int64_t r, double g) -> double
+    auto force_b(int64_t i, int64_t l1, int64_t l2, double p, double a, double b, int64_t r, double g) -> double
     {
         return binomial_prefactor(i, l1, l2, p - a, p - b) * b0(i, r, g);
     }
 
-    constexpr auto b_term(int64_t i1, int64_t i2, int64_t r1, int64_t r2, int64_t u, int64_t l1, int64_t l2, int64_t l3, int64_t l4, double px,
-                          double ax, double bx, double qx, double cx, double dx, double gamma1, double gamma2, double delta) -> double
+    auto b_term(int64_t i1, int64_t i2, int64_t r1, int64_t r2, int64_t u, int64_t l1, int64_t l2, int64_t l3, int64_t l4, double px, double ax,
+                double bx, double qx, double cx, double dx, double gamma1, double gamma2, double delta) -> double
     {
         return force_b(i1, l1, l2, px, ax, bx, r1, gamma1) * pow_i(-1, i2) * force_b(i2, l3, l4, qx, cx, dx, r2, gamma2) * pow_i(-1, u) *
                fact_ratio2(i1 + i2 - 2 * (r1 + r2), u) * pow_i(qx - px, i1 + i2 - 2 * (r1 + r2) - 2 * u) / pow_i(delta, i1 + i2 - 2 * (r1 + r2) - u);
     }
 
-    constexpr auto b_array(int64_t l1, int64_t l2, int64_t l3, int64_t l4, double p, double a, double b, double q, double c, double d, double g1,
-                           double g2, double delta) -> std::vector<double>
+    auto b_array(int64_t l1, int64_t l2, int64_t l3, int64_t l4, double p, double a, double b, double q, double c, double d, double g1, double g2,
+                 double delta) -> std::vector<double>
     {
         int imax = l1 + l2 + l3 + l4 + 1;
         std::vector<double> arr(imax, 0);
@@ -90,13 +90,13 @@ namespace
         return arr;
     }
 
-    constexpr auto a_term(int64_t i, int64_t r, int64_t u, int64_t l1, int64_t l2, double pax, double pbx, double cpx, double gamma) -> double
+    auto a_term(int64_t i, int64_t r, int64_t u, int64_t l1, int64_t l2, double pax, double pbx, double cpx, double gamma) -> double
     {
         return pow_i(-1, i) * binomial_prefactor(i, l1, l2, pax, pbx) * pow_i(-1, u) * fact(i) * pow_i(cpx, i - 2 * r - 2 * u) *
                pow_i(0.25 / gamma, r + u) / fact(r) / fact(u) / fact(i - 2 * r - 2 * u);
     }
 
-    constexpr auto a_array(int64_t l1, int64_t l2, double pa, double pb, double cp, double g) -> std::vector<double>
+    auto a_array(int64_t l1, int64_t l2, double pa, double pb, double cp, double g) -> std::vector<double>
     {
         int imax = l1 + l2 + 1;
         std::vector<double> arr(imax, 0);
@@ -114,7 +114,7 @@ namespace
         return arr;
     }
 
-    constexpr auto overlap_1d(int64_t l1, int64_t l2, double x1, double x2, double gamma) -> double
+    auto overlap_1d(int64_t l1, int64_t l2, double x1, double x2, double gamma) -> double
     {
         double sum = 0;
         for (int i = 0; i < (1 + floor(0.5 * (l1 + l2))); i++)
