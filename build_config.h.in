@@ -2,3 +2,12 @@
 #mesondefine PROJECT_NAME
 #mesondefine MESON_C_COMPILER
 #mesondefine MESON_CXX_COMPILER
+
+
+#mesondefine COMPILER_GCC
+#mesondefine COMPILER_CLANG
+#if defined(COMPILER_GCC)
+#define INLINE [[gnu::noinline]] inline
+#elif defined(COMPILER_CLANG)
+#define INLINE [[clang::noinline]] inline
+#endif

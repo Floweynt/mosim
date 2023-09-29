@@ -13,7 +13,7 @@ void electron_cloud_manager::render_current_iso()
     }
 
     dirty_status[mo_index] = false;
-    buffer_list[mo_index].isolevel_hf(*result_to_render, mo_index, CUBE_CORNER_1, CUBE_CORNER_2, SUBDIVISION_COUNT, ISOLEVEL);
+    buffer_list[mo_index].isolevel_hf(*result_to_render, mo_index, CUBE_CORNER_1, CUBE_CORNER_2, SUBDIVISION_COUNT, isolevel);
 }
 
 void electron_cloud_manager::set_result(const hartree_fock_result* result)
@@ -34,7 +34,7 @@ void electron_cloud_manager::set_result(const hartree_fock_result* result)
         buffer_list.resize(effective_buffer_size);
     }
 
-    mo_index = 0; 
+    mo_index = 0;
 }
 
 void electron_cloud_manager::render(gl::render_manager& render)
@@ -51,5 +51,11 @@ void electron_cloud_manager::render(gl::render_manager& render)
 
     render_current_iso();
     buffer_list[mo_index].render(render, LIGHT_POS);
+}
+
+void electron_cloud_manager::add_isolevel(double value)
+{
+    this->isolevel = std::clamp(value + this->isolevel, 0., 1.);
+    regenerate();
 }
 

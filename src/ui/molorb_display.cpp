@@ -8,6 +8,7 @@
 #include "ui/electron_cloud_manager.h"
 #include "ui_config.h"
 #include <future>
+#include <numeric>
 #include <string>
 #include <variant>
 
@@ -26,11 +27,11 @@ void molorb_display::bake_sphere(float radius, glm::vec3 center, uint32_t color)
             float a = (j - 0.5) * M_PI;
 
             glm::vec3 normal = {std::cos(a + DELTA_A / 2) * std::cos(b + DELTA_B / 2), std::cos(a + DELTA_A / 2) * std::sin(b + DELTA_B / 2),
-                                std::sin(a + DELTA_A / 2)};
+                std::sin(a + DELTA_A / 2)};
             glm::vec3 pt0(radius * std::cos(a) * std::cos(b), radius * std::cos(a) * std::sin(b), radius * std::sin(a));
             glm::vec3 pt1(radius * std::cos(a) * std::cos(b + DELTA_B), radius * std::cos(a) * std::sin(b + DELTA_B), radius * std::sin(a));
             glm::vec3 pt2(radius * std::cos(a + DELTA_A) * std::cos(b + DELTA_B), radius * std::cos(a + DELTA_A) * std::sin(b + DELTA_B),
-                          radius * std::sin(a + DELTA_A));
+                radius * std::sin(a + DELTA_A));
             glm::vec3 pt3(radius * std::cos(a + DELTA_A) * std::cos(b), radius * std::cos(a + DELTA_A) * std::sin(b), radius * std::sin(a + DELTA_A));
 
             atoms_vb.vert(atoms_vertex_buffer::builder().vert(pt0 + center).color(color).normal(normal).end());
@@ -50,8 +51,8 @@ void molorb_display::generate_static()
 {
     if (!bounding_box_vb.baked())
     {
-        static constexpr std::array<uint8_t, 12> EDGES = {0b000100, 0b100110, 0b110010, 0b010000, 0b001101, 0b101111,
-                                                          0b111011, 0b011001, 0b000001, 0b100101, 0b110111, 0b010011};
+        static constexpr std::array<uint8_t, 12> EDGES = {
+            0b000100, 0b100110, 0b110010, 0b010000, 0b001101, 0b101111, 0b111011, 0b011001, 0b000001, 0b100101, 0b110111, 0b010011};
 
         for (auto edge : EDGES)
         {
@@ -144,6 +145,12 @@ auto molorb_display::key_pressed(int key, int /*scancode*/, int mods) -> bool
         kb.toggle_render_box, key, mods, [this]() { display_box = !display_box; }, false);
     flag |= on_keybind(
         kb.save_solution, key, mods, [this]() { save(); }, false);
+
+    flag |= on_keybind(
+        kb.increment_isolevel, key, mods, [this]() { electron_cloud.add_isolevel(-0.002); }, false);
+    flag |= on_keybind(
+        kb.decrement_isolevel, key, mods, [this]() { electron_cloud.add_isolevel(0.002); }, false);
+
     return flag;
 }
 
@@ -189,162 +196,176 @@ auto molorb_display::mouse_button_pressed(int button, int mods) -> bool
         kb.toggle_render_box, button, mods, [this]() { display_box = !display_box; }, true);
     flag |= on_keybind(
         kb.save_solution, button, mods, [this]() { save(); }, true);
+
+    flag |= on_keybind(
+        kb.increment_isolevel, button, mods, [this]() { electron_cloud.add_isolevel(-0.002); }, true);
+    flag |= on_keybind(
+        kb.decrement_isolevel, button, mods, [this]() { electron_cloud.add_isolevel(0.002); }, true);
+
     return flag;
 }
 
 molorb_display::molorb_display(std::variant<hartree_fock_result, std::future<hartree_fock_result>, std::monostate> init_state)
     : result(std::move(init_state)), config(std::make_shared<config_ui>("a"))
 {
-    mo_display_buttons =
-        gl::build_glue("mo_display_buttons_glue", gl::ui_glue::GLUE_BOTTOM_LEFT,
-                       gl::padding_builder("mo_display_buttons_padding",
-                                           gl::vertical_stack_builder("mo_display_buttons")
-                                               .margin(5)
-                                               .add_child(gl::button_builder("goto_homo", "Goto HOMO")
-                                                              .size(100, 20)
-                                                              .bg_color(PASSIVE_COLOR)
-                                                              .hover_color(ACTIVE_COLOR)
-                                                              .text_color(TEXT_COLOR)
-                                                              .on_press([this](int key, int /*mods*/) {
-                                                                  if (key == GLFW_MOUSE_BUTTON_LEFT)
-                                                                  {
-                                                                      if (std::holds_alternative<hartree_fock_result>(this->result))
-                                                                      {
-                                                                          const auto& result = std::get<hartree_fock_result>(this->result);
-                                                                          electron_cloud.set_mo(result.homo_index);
-                                                                      }
-                                                                      return true;
-                                                                  }
-                                                                  return false;
-                                                              })
-                                                              .build())
-                                               .add_child(gl::button_builder("goto_lumo", "Goto LUMO")
-                                                              .size(100, 20)
-                                                              .bg_color(PASSIVE_COLOR)
-                                                              .hover_color(ACTIVE_COLOR)
-                                                              .text_color(TEXT_COLOR)
-                                                              .on_press([this](int key, int /*mods*/) {
-                                                                  if (key == GLFW_MOUSE_BUTTON_LEFT)
-                                                                  {
-                                                                      if (std::holds_alternative<hartree_fock_result>(this->result))
-                                                                      {
-                                                                          const auto& result = std::get<hartree_fock_result>(this->result);
-                                                                          electron_cloud.set_mo(result.homo_index + 1);
-                                                                      }
-                                                                      return true;
-                                                                  }
-                                                                  return false;
-                                                              })
-                                                              .build())
-                                               .add_child(gl::button_builder("goto_next_mo", "Next MO")
-                                                              .size(100, 20)
-                                                              .bg_color(PASSIVE_COLOR)
-                                                              .hover_color(ACTIVE_COLOR)
-                                                              .text_color(TEXT_COLOR)
-                                                              .on_press([this](int key, int /*mods*/) {
-                                                                  if (key == GLFW_MOUSE_BUTTON_LEFT)
-                                                                  {
-                                                                      if (std::holds_alternative<hartree_fock_result>(this->result))
-                                                                      {
-                                                                          electron_cloud.next_mo();
-                                                                      }
-                                                                      return true;
-                                                                  }
-                                                                  return false;
-                                                              })
-                                                              .build())
-                                               .add_child(gl::button_builder("goto_prev_mo", "Prev MO")
-                                                              .size(100, 20)
-                                                              .bg_color(PASSIVE_COLOR)
-                                                              .hover_color(ACTIVE_COLOR)
-                                                              .text_color(TEXT_COLOR)
-                                                              .on_press([this](int key, int /*mods*/) {
-                                                                  if (key == GLFW_MOUSE_BUTTON_LEFT)
-                                                                  {
-                                                                      if (std::holds_alternative<hartree_fock_result>(this->result))
-                                                                      {
-                                                                          electron_cloud.prev_mo();
-                                                                      }
-                                                                      return true;
-                                                                  }
-                                                                  return false;
-                                                              })
-                                                              .build())
-                                               .add_child(gl::button_builder("rerender", "Rerender")
-                                                              .size(100, 20)
-                                                              .bg_color(PASSIVE_COLOR)
-                                                              .hover_color(ACTIVE_COLOR)
-                                                              .text_color(TEXT_COLOR)
-                                                              .on_press([this](int key, int /*mods*/) {
-                                                                  if (key == GLFW_MOUSE_BUTTON_LEFT)
-                                                                  {
-                                                                      if (std::holds_alternative<hartree_fock_result>(this->result))
-                                                                      {
-                                                                          electron_cloud.regenerate();
-                                                                      }
-                                                                      return true;
-                                                                  }
-                                                                  return false;
-                                                              })
-                                                              .build())
-                                               .build())
-                           .pad(3)
-                           .bottom(MARGIN_BOTTOM + 3)
-                           .build());
+    mo_display_buttons = gl::build_glue("mo_display_buttons_glue", gl::ui_glue::GLUE_BOTTOM_LEFT,
+        gl::padding_builder("mo_display_buttons_padding", //
+            gl::vertical_stack_builder("mo_display_buttons")
+                .margin(5)
+                .add_child( //
+                    gl::button_builder("goto_homo", "Goto HOMO")
+                        .size(100, 20)
+                        .bg_color(PASSIVE_COLOR)
+                        .hover_color(ACTIVE_COLOR)
+                        .text_color(TEXT_COLOR)
+                        .on_press([this](int key, int /*mods*/) {
+                            if (key == GLFW_MOUSE_BUTTON_LEFT)
+                            {
+                                if (std::holds_alternative<hartree_fock_result>(this->result))
+                                {
+                                    const auto& result = std::get<hartree_fock_result>(this->result);
+                                    electron_cloud.set_mo(result.homo_index);
+                                }
+                                return true;
+                            }
+                            return false;
+                        })
+                        .build())
+                .add_child( //
+                    gl::button_builder("goto_lumo", "Goto LUMO")
+                        .size(100, 20)
+                        .bg_color(PASSIVE_COLOR)
+                        .hover_color(ACTIVE_COLOR)
+                        .text_color(TEXT_COLOR)
+                        .on_press([this](int key, int /*mods*/) {
+                            if (key == GLFW_MOUSE_BUTTON_LEFT)
+                            {
+                                if (std::holds_alternative<hartree_fock_result>(this->result))
+                                {
+                                    const auto& result = std::get<hartree_fock_result>(this->result);
+                                    electron_cloud.set_mo(result.homo_index + 1);
+                                }
+                                return true;
+                            }
+                            return false;
+                        })
+                        .build())
+                .add_child( //
+                    gl::button_builder("goto_next_mo", "Next MO")
+                        .size(100, 20)
+                        .bg_color(PASSIVE_COLOR)
+                        .hover_color(ACTIVE_COLOR)
+                        .text_color(TEXT_COLOR)
+                        .on_press([this](int key, int /*mods*/) {
+                            if (key == GLFW_MOUSE_BUTTON_LEFT)
+                            {
+                                if (std::holds_alternative<hartree_fock_result>(this->result))
+                                {
+                                    electron_cloud.next_mo();
+                                }
+                                return true;
+                            }
+                            return false;
+                        })
+                        .build())
+                .add_child( //
+                    gl::button_builder("goto_prev_mo", "Prev MO")
+                        .size(100, 20)
+                        .bg_color(PASSIVE_COLOR)
+                        .hover_color(ACTIVE_COLOR)
+                        .text_color(TEXT_COLOR)
+                        .on_press([this](int key, int /*mods*/) {
+                            if (key == GLFW_MOUSE_BUTTON_LEFT)
+                            {
+                                if (std::holds_alternative<hartree_fock_result>(this->result))
+                                {
+                                    electron_cloud.prev_mo();
+                                }
+                                return true;
+                            }
+                            return false;
+                        })
+                        .build())
+                .add_child( //
+                    gl::button_builder("rerender", "Rerender")
+                        .size(100, 20)
+                        .bg_color(PASSIVE_COLOR)
+                        .hover_color(ACTIVE_COLOR)
+                        .text_color(TEXT_COLOR)
+                        .on_press([this](int key, int /*mods*/) {
+                            if (key == GLFW_MOUSE_BUTTON_LEFT)
+                            {
+                                if (std::holds_alternative<hartree_fock_result>(this->result))
+                                {
+                                    electron_cloud.regenerate();
+                                }
+                                return true;
+                            }
+                            return false;
+                        })
+                        .build())
+                .build())
+            .pad(3)
+            .bottom(MARGIN_BOTTOM + 3)
+            .build());
 
     config_button = gl::build_glue("config_glue", gl::ui_glue::GLUE_TOP_RIGHT,
-                                   gl::padding_builder("config_padding", gl::button_builder("config", "Open Config")
-                                                                             .size(100, 20)
-                                                                             .bg_color(PASSIVE_COLOR)
-                                                                             .hover_color(ACTIVE_COLOR)
-                                                                             .text_color(TEXT_COLOR)
-                                                                             .on_press([this](int key, int /*mods*/) {
-                                                                                 if (key == GLFW_MOUSE_BUTTON_LEFT)
-                                                                                 {
-                                                                                     config->set_active(true);
-                                                                                     return true;
-                                                                                 }
-                                                                                 return false;
-                                                                             })
-                                                                             .build())
-                                       .pad(3)
-                                       .build());
+        gl::padding_builder("config_padding", //
+            gl::button_builder("config", "Open Config")
+                .size(100, 20)
+                .bg_color(PASSIVE_COLOR)
+                .hover_color(ACTIVE_COLOR)
+                .text_color(TEXT_COLOR)
+                .on_press([this](int key, int /*mods*/) {
+                    if (key == GLFW_MOUSE_BUTTON_LEFT)
+                    {
+                        config->set_active(true);
+                        return true;
+                    }
+                    return false;
+                })
+                .build())
+            .pad(3)
+            .build());
 
     file_ops_button = gl::build_glue("file_ops_button", gl::ui_glue::GLUE_BOTTOM_RIGHT,
-                                     gl::padding_builder("file_ops_padding", gl::vertical_stack_builder("file_ops_stack")
-                                                                                 .margin(5)
-                                                                                 .add_child(gl::button_builder("save", "Save result")
-                                                                                                .size(100, 20)
-                                                                                                .bg_color(PASSIVE_COLOR)
-                                                                                                .hover_color(ACTIVE_COLOR)
-                                                                                                .text_color(TEXT_COLOR)
-                                                                                                .on_press([this](int key, int /*mods*/) {
-                                                                                                    if (key == GLFW_MOUSE_BUTTON_LEFT)
-                                                                                                    {
-                                                                                                        save();
-                                                                                                        return true;
-                                                                                                    }
-                                                                                                    return false;
-                                                                                                })
-                                                                                                .build())
-                                                                                 .add_child(gl::button_builder("load", "Load file")
-                                                                                                .size(100, 20)
-                                                                                                .bg_color(PASSIVE_COLOR)
-                                                                                                .hover_color(ACTIVE_COLOR)
-                                                                                                .text_color(TEXT_COLOR)
-                                                                                                .on_press([this](int key, int /*mods*/) {
-                                                                                                    if (key == GLFW_MOUSE_BUTTON_LEFT)
-                                                                                                    {
-                                                                                                        load();
-                                                                                                        return true;
-                                                                                                    }
-                                                                                                    return false;
-                                                                                                })
-                                                                                                .build())
+        gl::padding_builder("file_ops_padding", //
+            gl::vertical_stack_builder("file_ops_stack")
+                .margin(5)
+                .add_child( //
+                    gl::button_builder("save", "Save result")
+                        .size(100, 20)
+                        .bg_color(PASSIVE_COLOR)
+                        .hover_color(ACTIVE_COLOR)
+                        .text_color(TEXT_COLOR)
+                        .on_press([this](int key, int /*mods*/) {
+                            if (key == GLFW_MOUSE_BUTTON_LEFT)
+                            {
+                                save();
+                                return true;
+                            }
+                            return false;
+                        })
+                        .build())
+                .add_child( //
+                    gl::button_builder("load", "Load file")
+                        .size(100, 20)
+                        .bg_color(PASSIVE_COLOR)
+                        .hover_color(ACTIVE_COLOR)
+                        .text_color(TEXT_COLOR)
+                        .on_press([this](int key, int /*mods*/) {
+                            if (key == GLFW_MOUSE_BUTTON_LEFT)
+                            {
+                                load();
+                                return true;
+                            }
+                            return false;
+                        })
+                        .build())
 
-                                                                                 .build())
-                                         .pad(3)
-                                         .build());
+                .build())
+            .pad(3)
+            .build());
 
     drag_handler = std::make_shared<gl::mouse_drag_handler<GLFW_MOUSE_BUTTON_LEFT>>();
 
@@ -445,7 +466,7 @@ void molorb_display::scrollwheel(double delta_x, double delta_y) { zoom = std::c
     }
 
     std::sort(ao_info.begin(), ao_info.end(),
-              [](const std::pair<double, std::string>& lhs, const std::pair<double, std::string>& rhs) { return abs(lhs.first) > abs(rhs.first); });
+        [](const std::pair<double, std::string>& lhs, const std::pair<double, std::string>& rhs) { return abs(lhs.first) > abs(rhs.first); });
 
     std::string out;
     for (auto& i : ao_info)
@@ -498,21 +519,23 @@ void molorb_display::render(gl::render_manager& renderer)
     else
     {
         const auto& result = std::get<hartree_fock_result>(this->result);
-
+        auto energies = result.mo_energies | std::views::take(result.electron_count / 2);
+        auto energy = std::accumulate(energies.begin(), energies.end(), 0.);
         gl::render_text(fmt::format("Info:\n"
                                     "  Iterations: {}\n"
                                     "  Electrons: {}\n"
                                     "  Solve time: {}us\n"
+                                    "  Energy: {} HT\n"
                                     "MO Info:\n"
                                     "  MO #{}\n"
                                     "  E: {:.4f} eV ({:.4f} HT)\n"
                                     "  {}\n"
                                     "AO Weights:\n"
                                     "{}\n",
-                                    result.iterations, result.electron_count, result.solve_time_microseconds, electron_cloud.get_index() + 1,
-                                    result.mo_energies[electron_cloud.get_index()] * EV_PER_HT, result.mo_energies[electron_cloud.get_index()],
-                                    get_electron_desc(), get_weight_desc()),
-                        {3, 3});
+                            result.iterations, result.electron_count, result.solve_time_microseconds, energy, electron_cloud.get_index() + 1,
+                            result.mo_energies[electron_cloud.get_index()] * EV_PER_HT, result.mo_energies[electron_cloud.get_index()],
+                            get_electron_desc(), get_weight_desc()),
+            {3, 3});
     }
     mo_display_buttons->render(renderer);
     config_button->render(renderer);

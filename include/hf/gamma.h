@@ -1,13 +1,19 @@
 // cSpell:disable
 #pragma once
 
+#include <bit>
+#include <build_config.h>
 #include <cmath>
+#include <cstdint>
 #include <iostream>
+#include <sparsehash/dense_hash_map>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace detail
 {
-    constexpr auto gcf(double a, double x) -> double
+    INLINE constexpr auto gcf(double a, double x) -> double
     {
         constexpr double FP_MIN = std::numeric_limits<double>::min() / std::numeric_limits<double>::epsilon();
         double gln = std::lgamma(a);
@@ -33,8 +39,8 @@ namespace detail
             d = 1.0 / d;
             double del = d * c;
             h *= del;
-                                                                                   // :P
-            if (std::fabs(del - 1.0) <= /*std::numeric_limits<double>::epsilon()*/ 0.00001)
+            // :P
+            if (std::fabs(del - 1.0) <= 0.00001)
             {
                 break;
             }
@@ -42,17 +48,17 @@ namespace detail
         return std::exp(-x + a * std::log(x) - gln) * h;
     }
 
-    constexpr auto gammp_approx(double a, double x, int psig) -> double
+    INLINE constexpr auto gammp_approx(double a, double x, int psig) -> double
     {
         constexpr int NGAU = 18;
         constexpr double y[] = {0.0021695375159141994, 0.011413521097787704, 0.027972308950302116, 0.051727015600492421, 0.082502225484340941,
-                                0.12007019910960293,   0.16415283300752470,  0.21442376986779355,  0.27051082840644336,  0.33199876341447887,
-                                0.39843234186401943,   0.46931971407375483,  0.54413605556657973,  0.62232745288031077,  0.70331500465597174,
-                                0.78649910768313447,   0.87126389619061517,  0.95698180152629142};
+            0.12007019910960293, 0.16415283300752470, 0.21442376986779355, 0.27051082840644336, 0.33199876341447887, 0.39843234186401943,
+            0.46931971407375483, 0.54413605556657973, 0.62232745288031077, 0.70331500465597174, 0.78649910768313447, 0.87126389619061517,
+            0.95698180152629142};
         constexpr double w[] = {0.0055657196642445571, 0.012915947284065419, 0.020181515297735382, 0.027298621498568734, 0.034213810770299537,
-                                0.040875750923643261,  0.047235083490265582, 0.053244713977759692, 0.058860144245324798, 0.064039797355015485,
-                                0.068745323835736408,  0.072941885005653087, 0.076598410645870640, 0.079687828912071670, 0.082187266704339706,
-                                0.084078218979661945,  0.085346685739338721, 0.085983275670394821};
+            0.040875750923643261, 0.047235083490265582, 0.053244713977759692, 0.058860144245324798, 0.064039797355015485, 0.068745323835736408,
+            0.072941885005653087, 0.076598410645870640, 0.079687828912071670, 0.082187266704339706, 0.084078218979661945, 0.085346685739338721,
+            0.085983275670394821};
         double xu;
         double a1 = a - 1.0;
         double lna1 = log(a1);
@@ -79,7 +85,7 @@ namespace detail
         return (psig ? (ans > 0.0 ? 1.0 - ans : -ans) : (ans >= 0.0 ? ans : 1.0 + ans));
     }
 
-    constexpr auto gser(double a, double x) -> double
+    INLINE constexpr auto gser(double a, double x) -> double
     {
         double sum = 0;
         double gln = std::lgamma(a);
@@ -97,7 +103,7 @@ namespace detail
         }
     }
 
-    constexpr auto gammp(double a, double x) -> double
+    INLINE constexpr auto gammp(double a, double x) -> double
     {
         constexpr int ASWITCH = 100;
         if (x < 0.0 || a <= 0.0)
@@ -121,16 +127,24 @@ namespace detail
         return 1.0 - gcf(a, x);
     }
 
-    constexpr auto gamm_inc(double a, double x) -> double
+    INLINE constexpr auto gamm_inc(double a, double x) -> double
     {
         double gammap = gammp(a, x);
         return std::tgamma(a) * gammap;
     }
+
+    void report(int64_t m, double x);
 } // namespace detail
 
-constexpr auto Fgamma(int64_t m, double x) -> double
+INLINE auto Fgamma(int64_t m, double x) -> double
 {
+    if (m == 0 && x == 0)
+    {
+        return 1;
+    }
+
     constexpr double tiny = 0.00000001;
     x = std::max(std::abs(x), tiny);
-    return 0.5 * pow(x, -m - 0.5) * detail::gamm_inc(m + 0.5, x);
+    auto res = 0.5 * pow(x, -m - 0.5) * detail::gamm_inc(m + 0.5, x);
+    return res;
 }

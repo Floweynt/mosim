@@ -1,12 +1,12 @@
 #pragma once
 #include <array>
+#include <build_config.h>
 #include <glm/glm.hpp>
 #include <type_traits>
 
+INLINE
 #if __cplusplus > 202002L
 constexpr
-#else
-inline
 #endif
     auto
     fact(int64_t val) -> int64_t
@@ -55,10 +55,9 @@ inline
     return res * TABLE[val];
 }
 
+INLINE
 #if __cplusplus > 202002L
 constexpr
-#else
-inline
 #endif
     auto
     fact2(int64_t val) -> int64_t
@@ -107,10 +106,9 @@ inline
     return res * TABLE[val];
 }
 
+INLINE
 #if __cplusplus > 202002L
 constexpr
-#else
-inline
 #endif
 
     auto
@@ -123,39 +121,39 @@ inline
     }
 #endif
 
-    static constexpr size_t CACHE_SIZE = 64;
+    static constexpr size_t CACHE_SIZE = 128;
     static std::array<int64_t, CACHE_SIZE * CACHE_SIZE> cache{};
-    if (0 < a && a < CACHE_SIZE && 0 < b && b < CACHE_SIZE && cache[a * CACHE_SIZE + b])
+
+    bool cachable = (0 <= a && a < CACHE_SIZE) && (0 <= b && b < CACHE_SIZE);
+    if (cachable && cache[a * CACHE_SIZE + b])
     {
         return cache[a * CACHE_SIZE + b];
     }
 
-    if (0 < a && a < CACHE_SIZE && 0 < b && b < CACHE_SIZE)
+    if (cachable)
     {
         return cache[a * CACHE_SIZE + b] = fact(a) / (fact(b) * fact(a - b));
     }
     return fact(a) / (fact(b) * fact(a - b));
 }
 
+INLINE
 #if __cplusplus > 202002L
 constexpr
-#else
-inline
 #endif
 
     auto
-    gaussian_product_center(const double& alpha1, const glm::dvec3& a, const double& alpha2, const glm::dvec3& b) -> glm::dvec3
+    gaussian_product(const double& alpha1, const glm::dvec3& a, const double& alpha2, const glm::dvec3& b) -> glm::dvec3
 {
     double gamma = alpha1 + alpha2;
     return {(alpha1 * a.x + alpha2 * b.x) / gamma, (alpha1 * a.y + alpha2 * b.y) / gamma, (alpha1 * a.z + alpha2 * b.z) / gamma};
 }
 
-    template <typename T>
+template <typename T>
     requires(std::is_integral_v<T>)
+INLINE
 #if __cplusplus > 202002L
-constexpr
-#else
-inline
+    constexpr
 #endif
     auto
     pow_i(double base, T exp)
@@ -185,10 +183,9 @@ inline
     return result;
 }
 
+INLINE
 #if __cplusplus > 202002L
 constexpr
-#else
-inline
 #endif
 
     auto
@@ -205,4 +202,31 @@ inline
     return sum;
 }
 
+#if __cplusplus > 202002L
+constexpr
+#endif
+    INLINE auto
+    fact_ratio2(int64_t a, int64_t b) -> double
+{
+#if __cplusplus > 202002L
+    if consteval
+    {
+        return fact(a) / fact(b) / fact(a - 2 * b);
+    }
+#endif
 
+    static constexpr size_t CACHE_SIZE = 128;
+    static std::array<int64_t, CACHE_SIZE * CACHE_SIZE> cache{};
+
+    bool cachable = (0 <= a && a < CACHE_SIZE) && (0 <= b && b < CACHE_SIZE);
+    if (cachable && cache[a * CACHE_SIZE + b])
+    {
+        return cache[a * CACHE_SIZE + b];
+    }
+
+    if (cachable)
+    {
+        return cache[a * CACHE_SIZE + b] = fact(a) / fact(b) / fact(a - 2 * b);
+    }
+    return fact(a) / fact(b) / fact(a - 2 * b);
+}

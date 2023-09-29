@@ -43,6 +43,8 @@ void keybind_config::save(const std::string& path) const
         {"toggle_render_mo", kb_to_json(toggle_render_mo)},
         {"toggle_render_atoms", kb_to_json(toggle_render_atoms)},
         {"toggle_render_box", kb_to_json(toggle_render_box)},
+        {"increment_isolevel", kb_to_json(increment_isolevel)},
+        {"decrement_isolevel", kb_to_json(decrement_isolevel)},
     };
 }
 
@@ -68,6 +70,8 @@ void keybind_config::load(const std::string& path)
         toggle_render_mo = kb_from_json(keybind.at("toggle_render_mo"));
         toggle_render_atoms = kb_from_json(keybind.at("toggle_render_atoms"));
         toggle_render_box = kb_from_json(keybind.at("toggle_render_box"));
+        increment_isolevel = kb_from_json(keybind.at("increment_isolevel"));
+        decrement_isolevel = kb_from_json(keybind.at("decrement_isolevel"));
     }
     catch (...)
     {

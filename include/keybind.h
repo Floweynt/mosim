@@ -30,6 +30,8 @@ public:
     keybind toggle_render_atoms{.key = GLFW_KEY_X};
     keybind toggle_render_box{.key = GLFW_KEY_C};
     keybind save_solution{.key = GLFW_KEY_S, .mods = GLFW_MOD_CONTROL};
+    keybind increment_isolevel{.key = GLFW_KEY_UP};
+    keybind decrement_isolevel{.key = GLFW_KEY_DOWN};
 
     void save(const std::string& path) const;
     void load(const std::string& path);

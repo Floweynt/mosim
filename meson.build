@@ -4,6 +4,8 @@ project('mosim', 'c', 'cpp',
 )
 cmake = import('cmake')
 
+add_project_arguments('-march=native', language: 'cpp')
+
 if get_option('buildtype').startswith('debug')
   add_project_arguments('-DDEBUG', language : 'cpp')
 endif
@@ -29,6 +31,7 @@ sources = [
   'src/gl/window.cpp',
   'src/resources.cpp',
   'src/hf/chem.cpp',
+  'src/hf/hf_setup.cpp',
   'src/ui/electron_cloud_manager.cpp',
   'src/ui/molorb_display.cpp',
   'src/gl/event.cpp',
@@ -55,7 +58,9 @@ assets = [
 
 include_dirs = [
   'include',
-  '.'
+  '.',
+  'subprojects/sparsehash-c11/sparsehash/',
+  'subprojects/sparsehash-c11/'
 ]
 
 tar =  find_program('tar')
@@ -88,6 +93,17 @@ conf_data.set_quoted('VERSION', meson.project_version())
 conf_data.set_quoted('PROJECT_NAME', 'mosim')
 conf_data.set_quoted('MESON_C_COMPILER', meson.get_compiler('c').get_id())
 conf_data.set_quoted('MESON_CXX_COMPILER', meson.get_compiler('cpp').get_id())
+
+comp_id = meson.get_compiler('cpp').get_id()
+if comp_id == 'gcc'
+    conf_data.set('COMPILER_GCC', true)
+    conf_data.set('COMPILER_CLANG', false)
+elif comp_id == 'clang'
+    conf_data.set('COMPILER_GCC', false)
+    conf_data.set('COMPILER_CLANG', true)
+else 
+    error('unknown cc', comp_id)
+endif
 
 configure_file(input: 'build_config.h.in', output: 'build_config.h', configuration : conf_data)
 

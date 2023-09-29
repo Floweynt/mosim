@@ -123,7 +123,7 @@ void emit_array(in vec4 out_buf[6], uint number_of_verts)
         vert_list[idx + i] = out_buf[i];
 }
 
-void march_the_cubes(in float cube_vals[4], float phase)
+void run(in float cube_vals[4], float phase)
 {
     bool origin = (cube_vals[0] * phase < isolevel);
     bool flags[3] = bool[]((cube_vals[1] * phase < isolevel), (cube_vals[2] * phase < isolevel), (cube_vals[3] * phase < isolevel));
@@ -152,7 +152,7 @@ void main()
     for (uint i = 0; i < 4; i++)
         cube_vals[i] = cube_val(i);
 
-    march_the_cubes(cube_vals, 1);
-    march_the_cubes(cube_vals, -1);
+    run(cube_vals, 1);
+    run(cube_vals, -1);
 }
 

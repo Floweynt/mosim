@@ -11,6 +11,7 @@ class electron_cloud_manager
     std::vector<hf_isosurface> buffer_list;
     size_t effective_buffer_size{};
     size_t mo_index{};
+    double isolevel = ISOLEVEL;
 
     void render_current_iso();
 
@@ -29,5 +30,7 @@ public:
     void set_result(const hartree_fock_result* result);
     void render(gl::render_manager& render);
     constexpr void regenerate() { dirty_status = std::vector<bool>(effective_buffer_size, true); }
+
+    void add_isolevel(double value);
 };
 

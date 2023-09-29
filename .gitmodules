@@ -7,3 +7,6 @@
 [submodule "subprojects/nativefiledialog-extended"]
 	path = subprojects/nativefiledialog-extended
 	url = https://github.com/btzy/nativefiledialog-extended
+[submodule "subprojects/sparsehash-c11"]
+	path = subprojects/sparsehash-c11
+	url = https://github.com/sparsehash/sparsehash-c11

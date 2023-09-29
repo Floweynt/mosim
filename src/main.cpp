@@ -9,6 +9,7 @@
 #include "gl/orbital_render.h"
 #include "gl/vertex_buffer.h"
 #include "gl/window.h"
+#include "hf/gamma.h"
 #include "hf/hf.h"
 #include "keybind.h"
 #include "nfd.h"
@@ -22,6 +23,7 @@
 #include <filesystem>
 #include <fmt/core.h>
 #include <glm/glm.hpp>
+#include <iomanip>
 #include <memory>
 #include <nlohmann/json.hpp>
 
@@ -87,7 +89,7 @@ namespace
     auto format_status(const fps_calculator& fps) -> std::string
     {
         return fmt::format(PROJECT_NAME " v" VERSION " - " MESON_CXX_COMPILER "/" MESON_C_COMPILER " - {:.2f} MiB - {}/{}/{} FPS",
-                           memory_used() / double(MiB_SIZE), (size_t)fps.get_fps(), (size_t)fps.get_max_fps(), (size_t)fps.get_min_fps());
+            memory_used() / double(MiB_SIZE), (size_t)fps.get_fps(), (size_t)fps.get_max_fps(), (size_t)fps.get_min_fps());
     }
 } // namespace
 
@@ -152,8 +154,8 @@ protected:
     }
 
 public:
-    mol_orbital(int width, int height, const char* name,
-                std::variant<hartree_fock_result, std::future<hartree_fock_result>, std::monostate> init_state)
+    mol_orbital(
+        int width, int height, const char* name, std::variant<hartree_fock_result, std::future<hartree_fock_result>, std::monostate> init_state)
         : gl::window(width, height, name), molorb_ui(std::move(init_state))
     {
     }
@@ -162,6 +164,7 @@ public:
 auto main(int argc, const char* argv[]) -> int
 {
     std::span<const char*> args(argv, argc);
+
     try
     {
         std::filesystem::create_directories(get_home() + "/.mo_config/");
@@ -172,6 +175,29 @@ auto main(int argc, const char* argv[]) -> int
         basis_manager::get_instance().register_basis("sto-4g");
         basis_manager::get_instance().register_basis("sto-5g");
         basis_manager::get_instance().register_basis("sto-6g");
+
+        if (args[1] == std::string_view("dump"))
+        {
+            if (argc != 3)
+            {
+                std::cerr << "usage: " << args[0] << "dump [input]";
+                exit(-1);
+            }
+
+            auto res = run_hf(args[2]).get();
+            auto orbs = res.orbitals.size();
+
+            for (size_t i = 0; i < orbs; i++)
+            {
+                for (size_t j = 0; j < orbs; j++)
+                {
+                    std::cout << std::setw(15) << std::setprecision(5) << res.coefficients(i, j) << ' ';
+                }
+                std::cout << '\n';
+            }
+
+            return 0;
+        }
 
         if (argc == 1)
         {

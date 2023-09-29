@@ -25,8 +25,14 @@ inline static constexpr std::pair<int, const char*> KEY_NAMES[] = {
 };
 
 inline static constexpr std::pair<int, const char*> MOUSE_BUTTON_NAMES[] = {
-    {GLFW_MOUSE_BUTTON_LEFT, "Left-c"}, {GLFW_MOUSE_BUTTON_RIGHT, "Right-c"}, {GLFW_MOUSE_BUTTON_MIDDLE, "Mid-c"}, {GLFW_MOUSE_BUTTON_4, "Btn4"},
-    {GLFW_MOUSE_BUTTON_5, "Btn5"},      {GLFW_MOUSE_BUTTON_6, "Btn6"},        {GLFW_MOUSE_BUTTON_7, "Btn7"},       {GLFW_MOUSE_BUTTON_8, "Btn8"},
+    {GLFW_MOUSE_BUTTON_LEFT, "Left-c"},
+    {GLFW_MOUSE_BUTTON_RIGHT, "Right-c"},
+    {GLFW_MOUSE_BUTTON_MIDDLE, "Mid-c"},
+    {GLFW_MOUSE_BUTTON_4, "Btn4"},
+    {GLFW_MOUSE_BUTTON_5, "Btn5"},
+    {GLFW_MOUSE_BUTTON_6, "Btn6"},
+    {GLFW_MOUSE_BUTTON_7, "Btn7"},
+    {GLFW_MOUSE_BUTTON_8, "Btn8"},
 };
 
 inline static constexpr std::pair<int, const char*> MOD_NAMES[] = {
@@ -233,45 +239,40 @@ void config_ui::on_update() { keybind_config::get_instance().save(get_home() + "
 config_ui::config_ui(std::string name) : ui_widget("config_menu", std::move(name))
 {
     auto& kb = keybind_config::get_instance();
-    keybind_stack =
-        gl::padding_builder(
-            "config_menu_padding",
-            gl::vertical_stack_builder("config_menu_stack")
-                .margin(1)
-                .add_child(gl::padding_builder("close_button_padding", gl::button_builder("close_button", "x")
-                                                                           .bg_color(PASSIVE_COLOR)
-                                                                           .hover_color(ACTIVE_COLOR)
-                                                                           .text_color(TEXT_COLOR)
-                                                                           .size(20, 20)
-                                                                           .on_press([this](int key, int mods) {
-                                                                               if (key == GLFW_MOUSE_BUTTON_LEFT)
-                                                                               {
-                                                                                   set_active(false);
-                                                                                   return true;
-                                                                               }
-                                                                               return false;
-                                                                           })
-                                                                           .build())
-                               .bottom(3)
-                               .build())
-                .add_child(gl::label_builder("keybind_label", "Keybinds")
-                               .size(CONFIG_UI_SIZE.x, 30)
-                               .bg_color(CONFIG_BG_COLOR)
-                               .text_color(TEXT_COLOR)
-                               .build())
-                .add_child(std::make_shared<keybind_ui>("keybind_homo", "Goto HOMO", on_update, &kb.goto_homo))
-                .add_child(std::make_shared<keybind_ui>("keybind_lumo", "Goto HOMO", on_update, &kb.goto_lumo))
-                .add_child(std::make_shared<keybind_ui>("keybind_rerender", "Rerender", on_update, &kb.rerender))
-                .add_child(std::make_shared<keybind_ui>("keybind_next_mo", "Goto next MO", on_update, &kb.goto_next_mo, &kb.goto_next_mo_alt))
-                .add_child(std::make_shared<keybind_ui>("keybind_prev_mo", "Goto previous MO", on_update, &kb.goto_prev_mo, &kb.goto_prev_mo_alt))
-                .add_child(std::make_shared<keybind_ui>("keybind_open_config", "Open Config", on_update, &kb.open_config))
-                .add_child(std::make_shared<keybind_ui>("keybind_toggle_render_mo", "Toggle render MO", on_update, &kb.toggle_render_mo))
-                .add_child(std::make_shared<keybind_ui>("keybind_toggle_render_atoms", "Toggle render atoms", on_update, &kb.toggle_render_atoms))
-                .add_child(std::make_shared<keybind_ui>("keybind_toggle_render_box", "Toggle render box", on_update, &kb.toggle_render_box))
-                .add_child(std::make_shared<keybind_ui>("keybind_save", "Save MO coefficients", on_update, &kb.save_solution))
-                .build())
-            .pad(3)
-            .build();
+    keybind_stack = gl::padding_builder("config_menu_padding",
+        gl::vertical_stack_builder("config_menu_stack")
+            .margin(1)
+            .add_child(gl::padding_builder("close_button_padding", gl::button_builder("close_button", "x")
+                                                                       .bg_color(PASSIVE_COLOR)
+                                                                       .hover_color(ACTIVE_COLOR)
+                                                                       .text_color(TEXT_COLOR)
+                                                                       .size(20, 20)
+                                                                       .on_press([this](int key, int) {
+                                                                           if (key == GLFW_MOUSE_BUTTON_LEFT)
+                                                                           {
+                                                                               set_active(false);
+                                                                               return true;
+                                                                           }
+                                                                           return false;
+                                                                       })
+                                                                       .build())
+                           .bottom(3)
+                           .build())
+            .add_child(
+                gl::label_builder("keybind_label", "Keybinds").size(CONFIG_UI_SIZE.x, 30).bg_color(CONFIG_BG_COLOR).text_color(TEXT_COLOR).build())
+            .add_child(std::make_shared<keybind_ui>("keybind_homo", "Goto HOMO", on_update, &kb.goto_homo))
+            .add_child(std::make_shared<keybind_ui>("keybind_lumo", "Goto HOMO", on_update, &kb.goto_lumo))
+            .add_child(std::make_shared<keybind_ui>("keybind_rerender", "Rerender", on_update, &kb.rerender))
+            .add_child(std::make_shared<keybind_ui>("keybind_next_mo", "Goto next MO", on_update, &kb.goto_next_mo, &kb.goto_next_mo_alt))
+            .add_child(std::make_shared<keybind_ui>("keybind_prev_mo", "Goto previous MO", on_update, &kb.goto_prev_mo, &kb.goto_prev_mo_alt))
+            .add_child(std::make_shared<keybind_ui>("keybind_open_config", "Open Config", on_update, &kb.open_config))
+            .add_child(std::make_shared<keybind_ui>("keybind_toggle_render_mo", "Toggle render MO", on_update, &kb.toggle_render_mo))
+            .add_child(std::make_shared<keybind_ui>("keybind_toggle_render_atoms", "Toggle render atoms", on_update, &kb.toggle_render_atoms))
+            .add_child(std::make_shared<keybind_ui>("keybind_toggle_render_box", "Toggle render box", on_update, &kb.toggle_render_box))
+            .add_child(std::make_shared<keybind_ui>("keybind_save", "Save MO coefficients", on_update, &kb.save_solution))
+            .build())
+                        .pad(3)
+                        .build();
     add_child(keybind_stack);
 }
 
@@ -346,4 +347,3 @@ void config_ui::set_active(bool flag)
         is_active = flag;
     }
 }
-
