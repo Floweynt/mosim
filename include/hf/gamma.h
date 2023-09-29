@@ -6,7 +6,6 @@
 #include <cmath>
 #include <cstdint>
 #include <iostream>
-#include <sparsehash/dense_hash_map>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>

@@ -7,7 +7,7 @@
 #mesondefine COMPILER_GCC
 #mesondefine COMPILER_CLANG
 #if defined(COMPILER_GCC)
-#define INLINE [[gnu::noinline]] inline
+#define INLINE [[gnu::always_inline]] inline
 #elif defined(COMPILER_CLANG)
-#define INLINE [[clang::noinline]] inline
+#define INLINE [[clang::always_inline]] inline
 #endif

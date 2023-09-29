@@ -58,9 +58,7 @@ assets = [
 
 include_dirs = [
   'include',
-  '.',
-  'subprojects/sparsehash-c11/sparsehash/',
-  'subprojects/sparsehash-c11/'
+  '.'
 ]
 
 tar =  find_program('tar')
